@@ -1,0 +1,40 @@
+body {
+    background-color: #F8F9FA;
+    color: #212529;
+    font-family: 'Arial', sans-serif;
+}
+
+.navbar {
+    background-color: #98FB98; /* Нежно-зеленый */
+}
+
+.navbar-brand, .nav-link {
+    color: #ffffff !important;
+}
+
+.card {
+    border: none;
+    background-color: #FFFFFF;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 15px;
+}
+
+.card-title {
+    color: #FF4500;
+    font-weight: bold;
+}
+
+.card-text {
+    color: #212529;
+}
+
+footer {
+    background-color: #212529;
+    color: #FFFFFF;
+    padding: 20px 0;
+}
+
+footer a {
+    color: #FFD700;
+    text-decoration: none;
+}

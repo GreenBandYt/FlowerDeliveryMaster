@@ -1,0 +1,8 @@
+from django.urls import path
+from . import views
+
+app_name = 'catalog'  # Пространство имен
+
+urlpatterns = [
+    path('', views.catalog_home, name='home'),  # Маршрут для главной страницы каталога
+]

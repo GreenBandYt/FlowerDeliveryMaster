@@ -1,0 +1,9 @@
+from django.urls import path, include
+from flowerdelivery.views import home_redirect
+
+urlpatterns = [
+    path('', home_redirect, name='home'),  # Редирект на login или catalog
+    #path('admin/', admin.site.urls),
+    path('users/', include('users.urls')),
+    path('catalog/', include('catalog.urls', namespace='catalog')),  # Пространство имен для каталога
+]
