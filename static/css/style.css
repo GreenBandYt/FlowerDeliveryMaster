@@ -74,3 +74,19 @@ h1, h2, h3 {
 p {
     color: #4B515D; /* Единый стиль для текста */
 }
+
+
+button {
+    background-color: #FF4500; /* Оранжевый цвет */
+    color: #FFFFFF; /* Белый текст */
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #FF6347; /* Более светлый оттенок оранжевого */
+}

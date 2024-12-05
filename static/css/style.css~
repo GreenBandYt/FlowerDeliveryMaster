@@ -1,15 +1,20 @@
 body {
-    background-color: #F8F9FA;
-    color: #212529;
+    background-color: #FFF8E7; /* Светло-кремовый фон для мягкости */
+    color: #4B515D; /* Темно-серый текст для контраста */
     font-family: 'Arial', sans-serif;
 }
 
 .navbar {
-    background-color: #98FB98; /* Нежно-зеленый */
+    background-color: #FFD700; /* Золотой цвет для солнечного настроения */
 }
 
 .navbar-brand, .nav-link {
-    color: #ffffff !important;
+    color: #4B515D !important; /* Темно-серый для контраста */
+    font-weight: bold; /* Более заметный текст */
+}
+
+.navbar-link:hover {
+    color: #FF4500 !important; /* Яркий акцент при наведении */
 }
 
 .card {
@@ -17,24 +22,55 @@ body {
     background-color: #FFFFFF;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     border-radius: 15px;
+    transition: transform 0.3s; /* Эффект увеличения при наведении */
+}
+
+.card:hover {
+    transform: scale(1.05); /* Легкое увеличение карточки */
 }
 
 .card-title {
-    color: #FF4500;
+    color: #FF69B4; /* Ярко-розовый для акцента */
     font-weight: bold;
 }
 
 .card-text {
-    color: #212529;
+    color: #4B515D; /* Темно-серый */
 }
 
 footer {
-    background-color: #212529;
-    color: #FFFFFF;
+    background-color: #98FB98; /* Нежно-зеленый */
+    color: #4B515D; /* Контрастный серый текст */
     padding: 20px 0;
 }
 
 footer a {
-    color: #FFD700;
+    color: #FF4500; /* Ярко-оранжевый акцент */
     text-decoration: none;
+}
+
+footer a:hover {
+    color: #FFD700; /* Золотой при наведении */
+}
+
+.button-primary {
+    background-color: #FF4500; /* Оранжевый цвет кнопок */
+    color: #FFFFFF;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.button-primary:hover {
+    background-color: #FF6347; /* Более насыщенный оранжевый при наведении */
+}
+
+h1, h2, h3 {
+    color: #4B515D; /* Единый стиль для заголовков */
+}
+
+p {
+    color: #4B515D; /* Единый стиль для текста */
 }

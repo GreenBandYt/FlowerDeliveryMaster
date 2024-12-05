@@ -1,5 +1,5 @@
-{% load static %}
 <!DOCTYPE html>
+{% load static %}
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -10,9 +10,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Lobster&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg" style="background-color: #98FB98;">
         <div class="container-fluid">
-            <a class="navbar-brand" href="/">Flower Delivery Master</a>
+            <a class="navbar-brand" href="/" style="font-family: 'Lobster', cursive; color: #2E8B57; font-size: 1.8rem;">
+                Flower Delivery Master
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -23,15 +25,15 @@
                             <!-- Кнопка выхода через POST -->
                             <form method="post" action="{% url 'logout' %}" style="display:inline;">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-link nav-link" style="padding: 0; color: inherit; text-decoration: none;">Logout</button>
+                                <button type="submit" class="btn btn-link nav-link" style="padding: 0; color: #FF4500; text-decoration: none;">Logout</button>
                             </form>
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'login' %}">Login</a>
+                            <a class="nav-link" href="{% url 'login' %}" style="color: #FF4500;">Login</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'register' %}">Register</a>
+                            <a class="nav-link" href="{% url 'register' %}" style="color: #FF4500;">Register</a>
                         </li>
                     {% endif %}
                 </ul>
@@ -45,9 +47,9 @@
         </div>
     </main>
 
-    <footer class="text-center mt-5">
+    <footer class="text-center mt-5" style="background-color: #2E8B57; color: #FFFFFF; padding: 20px 0;">
         <p>&copy; 2024 Flower Delivery Master</p>
-        <p>Created by <span class="text-success">GreenBandYt</span></p>
+        <p>Created by <span class="text-warning">GreenBandYt</span></p>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
