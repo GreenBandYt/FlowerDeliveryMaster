@@ -5,4 +5,5 @@ app_name = 'catalog'
 
 urlpatterns = [
     path('', views.catalog_home, name='home'),  # Главная страница каталога
+    path('product/<int:id>/', views.product_detail, name='product_detail'),  # Страница деталей товара
 ]
