@@ -4,24 +4,23 @@
 
 {% block content %}
 <div class="container mt-5">
+    <!-- Кнопка возврата в каталог -->
+    <a href="{% url 'catalog:home' %}" class="btn btn-secondary mb-4">← Назад в каталог</a>
+
     <div class="row">
         <div class="col-md-6">
             {% if product.image %}
-            <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid rounded">
+            <img src="{{ product.image.url }}" class="img-fluid product-detail-img" alt="{{ product.name }}">
             {% else %}
-            <img src="/media/products/placeholder.jpg" alt="No Image Available" class="img-fluid rounded">
+            <img src="/media/products/placeholder.jpg" class="img-fluid product-detail-img" alt="No Image Available">
             {% endif %}
         </div>
         <div class="col-md-6">
-            <h1 class="text-success">{{ product.name }}</h1>
-            <p class="text-muted">{{ product.description }}</p>
-            <h3 class="text-success">{{ product.price }} ₽</h3>
-            <button class="btn btn-primary btn-lg w-100 mt-3">Добавить в корзину</button>
+            <h1>{{ product.name }}</h1>
+            <p>{{ product.description }}</p>
+            <p class="text-success"><strong>{{ product.price }} ₽</strong></p>
+            <a href="#" class="btn btn-primary">Добавить в корзину</a>
         </div>
-    </div>
-    <div class="row mt-5">
-        <h3>Отзывы</h3>
-        <p>Здесь в будущем будет раздел отзывов.</p>
     </div>
 </div>
 {% endblock %}

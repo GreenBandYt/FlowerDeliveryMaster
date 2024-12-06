@@ -104,3 +104,13 @@ button {
 button:hover {
     background-color: #FF6347; /* Более светлый оттенок оранжевого */
 }
+
+.product-detail-img {
+    max-width: 90%; /* Уменьшена ширина */
+    max-height: 500px; /* Уменьшена максимальная высота */
+    object-fit: contain; /* Вписываем изображение, сохраняя пропорции */
+    margin: 0 auto; /* Центрируем изображение */
+    display: block; /* Убираем лишние отступы */
+    border-radius: 50px; /* Лёгкое скругление углов для эстетики */
+}
+
