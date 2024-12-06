@@ -5,6 +5,12 @@
 {% block content %}
 <div class="container mt-5">
     <h1 class="text-center">Ваша корзина</h1>
+
+    <!-- Кнопка возврата в каталог -->
+    <div class="mb-4">
+        <a href="{% url 'catalog:home' %}" class="btn btn-secondary">← Назад в каталог</a>
+    </div>
+
     <div class="row mt-4">
         {% if cart_items %}
         <table class="table">
@@ -21,18 +27,27 @@
                 {% for item in cart_items %}
                 <tr>
                     <td>{{ item.product.name }}</td>
-                    <td>{{ item.quantity }}</td>
-                    <td>{{ item.product.price }} ₽</td>
-                    <td>{{ item.quantity|multiply:item.product.price }} ₽</td>
                     <td>
-                        <a href="#" class="btn btn-danger btn-sm">Удалить</a>
+                        <form method="post" action="{% url 'catalog:update_quantity' item.id %}">
+                            {% csrf_token %}
+                            <input type="number" name="quantity" value="{{ item.quantity }}" min="1" class="form-control form-control-sm">
+                            <button type="submit" class="btn btn-sm btn-primary mt-2">Обновить</button>
+                        </form>
+                    </td>
+                    <td>{{ item.product.price }} ₽</td>
+                    <td>{{ item.price }} ₽</td>
+                    <td>
+                        <form method="post" action="{% url 'catalog:remove_from_cart' item.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
         <div class="text-end">
-            <strong>Общая сумма: {{ cart.total_price }} ₽</strong>
+            <strong>Общая сумма: {{ cart.get_total_price }} ₽</strong>
         </div>
         {% else %}
         <p class="text-center">Ваша корзина пуста. Начните добавлять товары!</p>

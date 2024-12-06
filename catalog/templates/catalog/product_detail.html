@@ -19,8 +19,16 @@
             <h1>{{ product.name }}</h1>
             <p>{{ product.description }}</p>
             <p class="text-success"><strong>{{ product.price }} ₽</strong></p>
-            <a href="{% url 'catalog:add_to_cart' product.id %}" class="btn btn-primary">Добавить в корзину</a>
 
+            <!-- Форма для добавления товара в корзину с выбором количества -->
+            <form action="{% url 'catalog:add_to_cart' product.id %}" method="POST" class="mt-4">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="quantity" class="form-label">Количество:</label>
+                    <input type="number" name="quantity" id="quantity" class="form-control" value="1" min="1" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Добавить в корзину</button>
+            </form>
         </div>
     </div>
 </div>

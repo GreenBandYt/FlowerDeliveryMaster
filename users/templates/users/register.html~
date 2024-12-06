@@ -1,16 +1,39 @@
 {% extends "base.html" %}
 
-{% block title %}Register{% endblock %}
+{% block title %}Регистрация{% endblock %}
 
 {% block content %}
 <div class="container mt-5">
-    <h2 class="text-center">Register</h2>
+    <h2 class="text-center">Регистрация</h2>
     <div class="row justify-content-center">
         <div class="col-md-6">
             <form method="post" class="bg-light p-4 rounded shadow-sm">
                 {% csrf_token %}
-                {{ form.as_p }}
-                <button type="submit" class="btn btn-primary w-100">Register</button>
+                <div class="mb-3">
+                    <label for="id_username" class="form-label">Имя пользователя:</label>
+                    <br>
+                    {{ form.username }}
+                    <div class="form-text">{{ form.username.help_text }}</div>
+                </div>
+                <div class="mb-3">
+                    <label for="id_email" class="form-label">Адрес электронной почты:</label>
+                    <br>
+                    {{ form.email }}
+                    <div class="form-text">{{ form.email.help_text }}</div>
+                </div>
+                <div class="mb-3">
+                    <label for="id_password1" class="form-label">Пароль:</label>
+                    <br>
+                    {{ form.password1 }}
+                    <div class="form-text">{{ form.password1.help_text }}</div>
+                </div>
+                <div class="mb-3">
+                    <label for="id_password2" class="form-label">Подтверждение пароля:</label>
+                    <br>
+                    {{ form.password2 }}
+                    <div class="form-text">{{ form.password2.help_text }}</div>
+                </div>
+                <button type="submit" class="btn btn-success w-100">Зарегистрироваться</button> <!-- Зеленая кнопка -->
             </form>
         </div>
     </div>

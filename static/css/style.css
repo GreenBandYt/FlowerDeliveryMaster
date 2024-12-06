@@ -114,3 +114,13 @@ button:hover {
     border-radius: 50px; /* Лёгкое скругление углов для эстетики */
 }
 
+.custom-form .mb-2 {
+    margin-bottom: 10px; /* Уменьшаем отступы между полями */
+}
+.custom-form .form-label {
+    font-size: 14px; /* Размер шрифта для меток */
+}
+.custom-form .form-text {
+    font-size: 12px; /* Размер шрифта для подсказок */
+    margin-top: 2px; /* Минимальный отступ сверху */
+}
