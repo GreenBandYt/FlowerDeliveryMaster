@@ -128,6 +128,10 @@ STATICFILES_DIRS = [
 # URL для перенаправления после успешного входа
 LOGIN_REDIRECT_URL = '/catalog/'
 
+# Настройки для медиафайлов
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 

@@ -2,10 +2,15 @@ body {
     background-color: #FFF8E7; /* Светло-кремовый фон для мягкости */
     color: #4B515D; /* Темно-серый текст для контраста */
     font-family: 'Arial', sans-serif;
+    padding-top: 70px; /* Отступ для фиксированной шапки */
 }
 
 .navbar {
     background-color: #FFD700; /* Золотой цвет для солнечного настроения */
+    position: fixed; /* Фиксируем шапку */
+    top: 0; /* Позиционируем её в верхней части */
+    width: 100%; /* Растягиваем на всю ширину экрана */
+    z-index: 1000; /* Высокий z-index для отображения поверх остальных элементов */
 }
 
 .navbar-brand, .nav-link {
@@ -38,10 +43,24 @@ body {
     color: #4B515D; /* Темно-серый */
 }
 
+.card-img-top {
+    max-height: 250px; /* Устанавливаем максимальную высоту */
+    height: 250px; /* Задаем фиксированную высоту */
+    width: 100%; /* Ширина всегда 100% */
+    object-fit: contain; /* Вписываем изображение, сохраняя пропорции */
+    background-color: #f8f9fa; /* Светло-серый фон для контраста */
+    border-radius: 8px; /* Добавляем скругление углов для эстетики */
+}
+
 footer {
     background-color: #98FB98; /* Нежно-зеленый */
     color: #4B515D; /* Контрастный серый текст */
-    padding: 20px 0;
+    padding: 2px 0;
+    text-align: center; /* Центрируем текст */
+    position: fixed; /* Фиксируем футер */
+    bottom: 0; /* Устанавливаем его у нижней границы */
+    width: 100%; /* Растягиваем на всю ширину окна */
+    z-index: 10; /* Поверх содержимого */
 }
 
 footer a {
@@ -53,18 +72,14 @@ footer a:hover {
     color: #FFD700; /* Золотой при наведении */
 }
 
-.button-primary {
-    background-color: #FF4500; /* Оранжевый цвет кнопок */
-    color: #FFFFFF;
+.btn-primary {
+    background-color: #28a745; /* Зеленый */
+    color: #ffffff;
     border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    font-weight: bold;
-    transition: background-color 0.3s;
 }
 
-.button-primary:hover {
-    background-color: #FF6347; /* Более насыщенный оранжевый при наведении */
+.btn-primary:hover {
+    background-color: #218838; /* Более насыщенный зеленый при наведении */
 }
 
 h1, h2, h3 {
@@ -74,7 +89,6 @@ h1, h2, h3 {
 p {
     color: #4B515D; /* Единый стиль для текста */
 }
-
 
 button {
     background-color: #FF4500; /* Оранжевый цвет */

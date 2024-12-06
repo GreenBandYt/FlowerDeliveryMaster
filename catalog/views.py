@@ -1,7 +1,9 @@
 from django.shortcuts import render
+from .models import Product
 
 def catalog_home(request):
     """
-    Главная страница каталога.
+    Главная страница каталога с отображением всех товаров.
     """
-    return render(request, 'catalog/home.html', {})
+    products = Product.objects.all()  # Получаем все товары из базы данных
+    return render(request, 'catalog/home.html', {'products': products})
