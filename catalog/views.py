@@ -20,8 +20,9 @@ def cart_view(request):
     Отображение содержимого корзины.
     """
     cart, _ = Cart.objects.get_or_create(user=request.user)  # Получаем или создаём корзину пользователя
-    cart_items = cart.cartitem_set.all()  # Получаем все товары в корзине
+    cart_items = cart.items.all()  # Используем related_name для доступа к элементам
     return render(request, 'catalog/cart.html', {'cart': cart, 'cart_items': cart_items})
+
 
 def add_to_cart(request, product_id):
     """
