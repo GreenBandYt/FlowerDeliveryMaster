@@ -34,7 +34,7 @@ class OrderForm(forms.Form):
         required=False,  # Поле не обязательно для заполнения
         widget=forms.Textarea(attrs={
             'class': 'form-control',
-            'placeholder': 'Дополнительная информация (не обязательно)',  # Подсказка для пользователя
+            'placeholder': 'Дополнительная информация',  # Подсказка для пользователя
             'rows': 3,  # Высота текстового поля
         }),
     )

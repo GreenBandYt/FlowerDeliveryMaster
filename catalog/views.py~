@@ -86,7 +86,7 @@ def checkout(request):
             order = Order.objects.create(
                 user=request.user,
                 total_price=cart.get_total_price(),
-                notes=form.cleaned_data.get('comments'),
+                notes=form.cleaned_data.get('notes')
             )
 
             # Перенос элементов из корзины в заказ
@@ -104,11 +104,11 @@ def checkout(request):
             messages.success(request, "Ваш заказ успешно оформлен!")
             return redirect('catalog:home')
     else:
-        # Подготовка данных для автозаполнения формы
+        # Предзаполняем форму данными пользователя
         initial_data = {
             'name': request.user.username,  # Имя пользователя
-            'phone': getattr(request.user, 'phone_number', ''),  # Телефон пользователя
-            'address': getattr(request.user, 'address', ''),  # Адрес пользователя
+            'phone_number': request.user.phone_number,  # Номер телефона
+            'address': request.user.address,  # Адрес доставки
         }
         form = OrderForm(initial=initial_data)
 
