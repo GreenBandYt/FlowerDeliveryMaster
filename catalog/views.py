@@ -1,5 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Product, Cart, CartItem
+from .models import Product, Cart, CartItem, Order, OrderItem
+from .forms import OrderForm
+from django.contrib import messages
 
 def catalog_home(request):
     """
@@ -65,3 +67,54 @@ def remove_from_cart(request, item_id):
         cart_item = get_object_or_404(CartItem, id=item_id)
         cart_item.delete()
     return redirect('catalog:cart')
+
+def checkout(request):
+    """
+    Оформление заказа.
+    """
+    cart, created = Cart.objects.get_or_create(user=request.user)
+    cart_items = cart.items.all()
+
+    if not cart_items:
+        messages.error(request, "Ваша корзина пуста. Добавьте товары перед оформлением заказа.")
+        return redirect('catalog:cart')
+
+    if request.method == 'POST':
+        form = OrderForm(request.POST)
+        if form.is_valid():
+            # Создание нового заказа
+            order = Order.objects.create(
+                user=request.user,
+                total_price=cart.get_total_price(),
+                notes=form.cleaned_data.get('notes')
+            )
+
+            # Перенос элементов из корзины в заказ
+            for item in cart_items:
+                OrderItem.objects.create(
+                    order=order,
+                    product=item.product,
+                    quantity=item.quantity,
+                    price=item.price
+                )
+
+            # Очищаем корзину после оформления заказа
+            cart.items.all().delete()
+
+            messages.success(request, "Ваш заказ успешно оформлен!")
+            return redirect('catalog:home')
+    else:
+        form = OrderForm()
+
+    return render(request, 'catalog/checkout.html', {
+        'cart_items': cart_items,
+        'form': form,
+        'total_price': cart.get_total_price(),
+    })
+
+def order_history(request):
+    """
+    Отображение истории заказов пользователя.
+    """
+    orders = Order.objects.filter(user=request.user).order_by('-created_at')  # Получаем заказы текущего пользователя
+    return render(request, 'catalog/order_history.html', {'orders': orders})

@@ -49,11 +49,6 @@
         <div class="text-end">
             <strong>Общая сумма: {{ cart.get_total_price }} ₽</strong>
         </div>
-
-        <!-- Кнопка перехода к оформлению заказа -->
-        <div class="text-center mt-4">
-            <a href="{% url 'catalog:checkout' %}" class="btn btn-success btn-lg">Перейти к оформлению заказа</a>
-        </div>
         {% else %}
         <p class="text-center">Ваша корзина пуста. Начните добавлять товары!</p>
         {% endif %}
