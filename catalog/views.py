@@ -1,7 +1,9 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Product, Cart, CartItem, Order, OrderItem
-from .forms import OrderForm
+from .models import Product, Cart, CartItem, Order, OrderItem, Review
+from .forms import OrderForm, ReviewForm  # Импортируем формы
 from django.contrib import messages
+from django.core.paginator import Paginator  # Импортируем для пагинации
+from django.contrib.auth.decorators import user_passes_test  # Для проверки прав
 
 def catalog_home(request):
     """
@@ -12,10 +14,47 @@ def catalog_home(request):
 
 def product_detail(request, product_id):
     """
-    Страница деталей товара.
+    Страница деталей товара с возможностью добавления отзыва.
     """
-    product = get_object_or_404(Product, id=product_id)  # Получаем товар или возвращаем 404
-    return render(request, 'catalog/product_detail.html', {'product': product})
+    product = get_object_or_404(Product, id=product_id)
+    reviews = product.reviews.all()  # Получаем все отзывы, связанные с этим товаром
+
+    if request.method == 'POST':
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            # Создаём новый отзыв
+            Review.objects.create(
+                user=request.user,
+                product=product,
+                rating=form.cleaned_data['rating'],
+                review_text=form.cleaned_data['review_text']
+            )
+            messages.success(request, "Ваш отзыв успешно добавлен!")
+            return redirect('catalog:product_detail', product_id=product_id)
+    else:
+        form = ReviewForm()
+
+    return render(request, 'catalog/product_detail.html', {
+        'product': product,
+        'reviews': reviews,
+        'form': form  # Передаём форму в шаблон
+    })
+
+def product_reviews(request, product_id):
+    """
+    Отображение всех отзывов для конкретного продукта с пагинацией.
+    """
+    product = get_object_or_404(Product, id=product_id)
+    reviews = product.reviews.all().order_by('-created_at')  # Сортируем отзывы по дате добавления
+    paginator = Paginator(reviews, 5)  # Пагинация: 5 отзывов на страницу
+
+    page_number = request.GET.get('page')
+    page_reviews = paginator.get_page(page_number)
+
+    return render(request, 'catalog/reviews.html', {
+        'product': product,
+        'reviews': page_reviews,
+    })
 
 def cart_view(request):
     """
@@ -104,20 +143,24 @@ def checkout(request):
             messages.success(request, "Ваш заказ успешно оформлен!")
             return redirect('catalog:home')
     else:
-        # Подготовка данных для автозаполнения формы
+        # Подготовка данных для автозаполнения адреса
         initial_data = {
-            'name': request.user.username,  # Имя пользователя
-            'phone': getattr(request.user, 'phone_number', ''),  # Телефон пользователя
             'address': getattr(request.user, 'address', ''),  # Адрес пользователя
         }
         form = OrderForm(initial=initial_data)
 
+    # Передача данных пользователя для отображения в шаблоне
+    user_data = {
+        'username': request.user.username,
+        'phone': getattr(request.user, 'phone_number', 'Не указан'),  # Телефон пользователя
+    }
+
     return render(request, 'catalog/checkout.html', {
         'cart_items': cart_items,
         'form': form,
+        'user_data': user_data,
         'total_price': cart.get_total_price(),
     })
-
 
 def order_history(request):
     """
@@ -125,3 +168,38 @@ def order_history(request):
     """
     orders = Order.objects.filter(user=request.user).order_by('-created_at')  # Получаем заказы текущего пользователя
     return render(request, 'catalog/order_history.html', {'orders': orders})
+
+def repeat_order(request, order_id):
+    """
+    Повторение заказа. Перенос всех товаров из указанного заказа в корзину.
+    """
+    order = get_object_or_404(Order, id=order_id, user=request.user)  # Убедимся, что заказ принадлежит пользователю
+    cart, _ = Cart.objects.get_or_create(user=request.user)  # Получаем или создаём корзину пользователя
+
+    for item in order.items.all():
+        cart_item, created = CartItem.objects.get_or_create(cart=cart, product=item.product)
+        if not created:
+            cart_item.quantity += item.quantity  # Если товар уже есть в корзине, увеличиваем количество
+        else:
+            cart_item.quantity = item.quantity  # Иначе добавляем как новый
+        cart_item.save()
+
+    messages.success(request, "Товары из заказа добавлены в вашу корзину.")
+    return redirect('catalog:cart')
+
+def delete_order(request, order_id):
+    """
+    Удаление заказа.
+    """
+    order = get_object_or_404(Order, id=order_id, user=request.user)  # Убедимся, что это заказ текущего пользователя
+    if request.method == 'POST':
+        order.delete()  # Удаляем заказ
+        messages.success(request, f"Заказ {order_id} успешно удалён.")
+    return redirect('catalog:order_history')  # Перенаправляем на историю заказов
+
+@user_passes_test(lambda u: u.is_staff)  # Декоратор: доступ только для администраторов
+def admin_dashboard(request):
+    """
+    Страница административной панели.
+    """
+    return render(request, 'catalog/admin_dashboard.html', {})  # Заглушка шаблона

@@ -31,25 +31,8 @@
             <!-- Средний рейтинг и кнопка для перехода на страницу отзывов -->
             <div class="mt-5">
                 <h3>Отзывы</h3>
-                <p><strong>Средний рейтинг:</strong> {{ product.get_average_rating }}</p>
-                <a href="{% url 'catalog:reviews' product.id %}" class="btn btn-secondary">Посмотреть отзывы</a>
-            </div>
-
-            <!-- Форма для добавления отзыва -->
-            <div class="mt-4">
-                <h3>Добавить отзыв</h3>
-                <form action="" method="POST">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        {{ form.rating.label_tag }}
-                        {{ form.rating }}
-                    </div>
-                    <div class="mb-3">
-                        {{ form.review_text.label_tag }}
-                        {{ form.review_text }}
-                    </div>
-                    <button type="submit" class="btn btn-primary">Оставить отзыв</button>
-                </form>
+                <p><strong>Средний рейтинг:</strong> {{ product.get_average_rating }}</p> <!-- Выводим средний рейтинг -->
+                <a href="{% url 'catalog:reviews' product.id %}" class="btn btn-secondary">Посмотреть отзывы</a> <!-- Кнопка перехода -->
             </div>
         </div>
     </div>

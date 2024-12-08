@@ -20,6 +20,7 @@
                 <th>Общая сумма</th>
                 <th>Статус</th>
                 <th>Товары</th>
+                <th>Действия</th> <!-- Добавлено -->
             </tr>
         </thead>
         <tbody>
@@ -35,6 +36,18 @@
                         <li>{{ item.product.name }} - {{ item.quantity }} шт. ({{ item.price }} ₽)</li>
                         {% endfor %}
                     </ul>
+                </td>
+                <td>
+                    <!-- Кнопка повторного заказа -->
+                    <form method="post" action="{% url 'catalog:repeat_order' order.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary btn-sm">Повторить заказ</button>
+                    </form>
+                    <!-- Кнопка удаления заказа -->
+                    <form method="post" action="{% url 'catalog:delete_order' order.id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
+                    </form>
                 </td>
             </tr>
             {% endfor %}

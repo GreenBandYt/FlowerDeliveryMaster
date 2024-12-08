@@ -1,31 +1,29 @@
 body {
+    background-color: #FFF8E7; /* Светло-кремовый фон для мягкости */
+    color: #4B515D; /* Темно-серый текст для контраста */
+    font-family: 'Arial', sans-serif;
     margin: 0;
     padding: 0;
-    font-family: 'Arial', sans-serif;
-    background-color: #FFF8E7; /* Светло-кремовый фон */
-    color: #4B515D; /* Темно-серый текст */
+    min-height: 100vh; /* Минимальная высота экрана */
     display: flex;
     flex-direction: column;
-    min-height: 100vh; /* Минимальная высота - экран */
 }
 
 .content-wrapper {
-    flex: 1; /* Контент растягивается, чтобы толкать футер вниз */
-    display: flex;
-    flex-direction: column;
+    flex: 1; /* Растягиваем контент, чтобы он "толкал" футер вниз */
 }
 
 .navbar {
-    background-color: #FFD700; /* Золотой цвет */
-    position: fixed; /* Закрепляем вверху */
-    top: 0;
-    width: 100%;
-    z-index: 1000;
+    background-color: #FFD700; /* Золотой цвет для солнечного настроения */
+    position: fixed; /* Фиксируем шапку */
+    top: 0; /* Позиционируем её в верхней части */
+    width: 100%; /* Растягиваем на всю ширину экрана */
+    z-index: 1000; /* Высокий z-index для отображения поверх остальных элементов */
 }
 
 .navbar-brand, .nav-link {
-    color: #4B515D !important; /* Темно-серый текст */
-    font-weight: bold;
+    color: #4B515D !important; /* Темно-серый для контраста */
+    font-weight: bold; /* Более заметный текст */
 }
 
 .navbar-link:hover {
@@ -64,11 +62,12 @@ body {
 
 .footer-class {
     background-color: #98FB98; /* Нежно-зеленый */
-    text-align: center;
+    color: #4B515D; /* Контрастный серый текст */
     padding: 10px 0;
-    color: #4B515D;
+    text-align: center; /* Центрируем текст */
+    position: relative; /* Убираем фиксацию */
+    width: 100%; /* Растягиваем футер на всю ширину */
     margin-top: 20px; /* Отступ сверху */
-    width: 100%; /* На всю ширину */
 }
 
 footer a {

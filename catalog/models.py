@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-
+from django.db.models import Avg  # Импорт для вычисления среднего значения
 
 # Модель продукта
 class Product(models.Model):
@@ -10,6 +10,14 @@ class Product(models.Model):
     image = models.ImageField(upload_to='products/', blank=True, null=True, verbose_name="Image")  # Изображение продукта
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")  # Дата создания записи
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")  # Дата последнего обновления записи
+
+    def get_average_rating(self):
+        """
+        Возвращает средний рейтинг продукта, округлённый до 1 знака после запятой.
+        Если отзывов нет, возвращает 'Нет рейтинга'.
+        """
+        average = self.reviews.aggregate(Avg('rating'))['rating__avg']  # Используем related_name "reviews"
+        return round(average, 1) if average else 'Нет рейтинга'
 
     def __str__(self):
         return self.name  # Возвращает строковое представление продукта
@@ -125,3 +133,32 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity} x {self.product.name} in Order {self.order.id}"  # Строковое представление элемента заказа
+
+
+# Модель отзывов
+class Review(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        verbose_name="User"
+    )  # Связь отзыва с пользователем
+    product = models.ForeignKey(
+        Product,
+        related_name="reviews",
+        on_delete=models.CASCADE,
+        verbose_name="Product"
+    )  # Связь отзыва с продуктом
+    rating = models.PositiveIntegerField(
+        verbose_name="Rating",
+        default=1,
+        choices=[(i, i) for i in range(1, 6)]  # Рейтинг от 1 до 5
+    )  # Оценка
+    review_text = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Review Text"
+    )  # Текст отзыва
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")  # Дата создания отзыва
+
+    def __str__(self):
+        return f"Review by {self.user} on {self.product.name}"  # Строковое представление отзыва

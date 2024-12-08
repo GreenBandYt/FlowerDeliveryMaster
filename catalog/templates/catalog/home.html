@@ -20,7 +20,9 @@
                     <h5 class="card-title">{{ product.name }}</h5>
                     <p class="card-text">{{ product.description|truncatechars:100 }}</p>
                     <p class="card-text text-success"><strong>{{ product.price }} ₽</strong></p>
-
+                    <p class="card-text">
+                        <strong>Рейтинг:</strong> {{ product.get_average_rating }}
+                    </p>
                     <a href="{% url 'catalog:product_detail' product.id %}" class="btn btn-primary w-100">Подробнее</a>
                 </div>
             </div>

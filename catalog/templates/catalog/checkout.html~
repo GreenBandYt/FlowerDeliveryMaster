@@ -31,16 +31,9 @@
             </ul>
         </div>
 
-        <!-- Данные пользователя и форма -->
+        <!-- Форма оформления заказа -->
         <div class="col-md-4">
-            <h4>Данные пользователя</h4>
-            <div class="mb-3">
-                <strong>Имя:</strong> {{ user_data.username }}
-            </div>
-            <div class="mb-3">
-                <strong>Телефон:</strong> {{ user_data.phone }}
-            </div>
-            <h4>Адрес доставки</h4>
+            <h4>Введите ваши данные</h4>
             <form method="post" class="bg-light p-4 rounded shadow-sm">
                 {% csrf_token %}
                 {{ form.as_p }}

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}Админ-зона{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Добро пожаловать в Админ-зону!</h1>
+    <p>Здесь будет функционал для управления заказами и аналитики.</p>
+</div>
+{% endblock %}
