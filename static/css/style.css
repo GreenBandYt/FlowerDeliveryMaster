@@ -132,3 +132,34 @@ button:hover {
     font-size: 12px; /* Размер шрифта для подсказок */
     margin-top: 2px; /* Минимальный отступ сверху */
 }
+
+/* Стиль для карточек аналитики */
+.card.bg-info {
+    background-color: #A7D8F9; /* Мягкий голубой */
+    color: #4B515D; /* Темно-серый текст */
+}
+
+.card.bg-success {
+    background-color: #A8D5BA; /* Мягкий зеленый */
+    color: #4B515D; /* Темно-серый текст */
+}
+
+.card.bg-warning {
+    background-color: #F5D76E; /* Мягкий желтый */
+    color: #4B515D; /* Темно-серый текст */
+}
+
+.card.bg-danger {
+    background-color: #F5A9B8; /* Мягкий розовый */
+    color: #4B515D; /* Темно-серый текст */
+}
+
+/* Добавление текста на карточки */
+.card .card-title {
+    color: #FF69B4; /* Ярко-розовый для акцента */
+    font-weight: bold;
+}
+
+.card .card-text {
+    color: #4B515D; /* Темно-серый */
+}

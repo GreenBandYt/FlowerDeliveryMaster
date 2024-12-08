@@ -9,6 +9,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),  # Административная панель
     path('users/', include('users.urls')),  # Пользовательские маршруты
     path('catalog/', include('catalog.urls', namespace='catalog')),  # Пространство имен для каталога
+    path('admin-zone/', include('admin_zone.urls', namespace='admin_zone')),  # Пространство имен для admin_zone
 ]
 
 # Добавляем маршруты для медиафайлов

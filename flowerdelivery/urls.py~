@@ -1,5 +1,7 @@
-from django.contrib import admin  # Добавляем этот импорт
+from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 from flowerdelivery.views import home_redirect
 
 urlpatterns = [
@@ -8,3 +10,7 @@ urlpatterns = [
     path('users/', include('users.urls')),  # Пользовательские маршруты
     path('catalog/', include('catalog.urls', namespace='catalog')),  # Пространство имен для каталога
 ]
+
+# Добавляем маршруты для медиафайлов
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

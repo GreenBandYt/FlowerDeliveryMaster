@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Админ-зона{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Добро пожаловать в Админ-зону!</h1>
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <a href="{% url 'admin_zone:home' %}" class="btn btn-primary w-100">Главная</a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'admin_zone:orders' %}" class="btn btn-primary w-100">Управление заказами</a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'admin_zone:reviews' %}" class="btn btn-primary w-100">Управление отзывами</a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'admin_zone:analytics' %}" class="btn btn-primary w-100">Просмотр аналитики</a>
+        </div>
+    </div>
+
+    <h2 class="mt-5">Список пользователей</h2>
+    <p>Общее количество пользователей: {{ users.count }}</p>
+
+    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Имя пользователя</th>
+                    <th>Email</th>
+                    <th>Телефон</th>
+                    <th>Адрес</th>
+                    <th>Статус</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.phone_number }}</td>
+                    <td>{{ user.address }}</td>
+                    <td>
+                        {% if user.is_staff %}
+                            Админитратор
+                        {% else %}
+                            Пользователь
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

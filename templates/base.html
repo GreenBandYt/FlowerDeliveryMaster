@@ -21,7 +21,7 @@
                     {% if user.is_authenticated %}
                         <a class="nav-link me-3" href="{% url 'catalog:cart' %}" style="color: #FF4500; text-decoration: none;">
                             Корзина
-                            {% if cart_count %}
+                            {% if cart_count is not None %}
                                 (<strong>{{ cart_count }}</strong>)
                             {% else %}
                                 (0)
@@ -33,7 +33,7 @@
 
                         <!-- Условие для отображения кнопки админки -->
                         {% if user.is_staff %}
-                        <a class="nav-link me-3" href="{% url 'catalog:admin_dashboard' %}" style="color: #FF4500; text-decoration: none;">
+                        <a class="nav-link me-3" href="{% url 'admin_zone:home' %}" style="color: #FF4500; text-decoration: none;">
                             Админ-зона
                         </a>
                         {% endif %}

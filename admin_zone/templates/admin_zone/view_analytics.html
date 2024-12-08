@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Просмотр аналитики{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 style="color: #4B515D;">Просмотр аналитики</h1>
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <a href="{% url 'admin_zone:home' %}" class="btn" style="background-color: #28a745; color: white; width: 100%;">Главная</a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'admin_zone:orders' %}" class="btn" style="background-color: #28a745; color: white; width: 100%;">Управление заказами</a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'admin_zone:reviews' %}" class="btn" style="background-color: #28a745; color: white; width: 100%;">Управление отзывами</a>
+        </div>
+        <div class="col-md-3">
+            <a href="{% url 'admin_zone:analytics' %}" class="btn" style="background-color: #28a745; color: white; width: 100%;">Просмотр аналитики</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Карточка Пользователи -->
+        <div class="col-md-3">
+            <div class="card" style="background-color: #A3D8F4; color: white; margin-bottom: 15px; border-radius: 10px;">
+                <div class="card-body">
+                    <h5 class="card-title" style="font-weight: bold; color: #FF69B4;">Пользователи</h5>
+                    <p class="card-text" style="font-size: 1.25rem; color: #4B515D;"><strong>{{ total_users }}</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Карточка Всего заказов -->
+        <div class="col-md-3">
+            <div class="card" style="background-color: #A8E6A0; color: white; margin-bottom: 15px; border-radius: 10px;">
+                <div class="card-body">
+                    <h5 class="card-title" style="font-weight: bold; color: #FF69B4;">Всего заказов</h5>
+                    <p class="card-text" style="font-size: 1.25rem; color: #4B515D;"><strong>{{ total_orders }}</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Карточка Общий доход -->
+        <div class="col-md-3">
+            <div class="card" style="background-color: #FFF3A5; color: white; margin-bottom: 15px; border-radius: 10px;">
+                <div class="card-body">
+                    <h5 class="card-title" style="font-weight: bold; color: #FF69B4;">Общий доход</h5>
+                    <p class="card-text" style="font-size: 1.25rem; color: #4B515D;"><strong>{{ total_revenue }} ₽</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Карточка Средний чек -->
+        <div class="col-md-3">
+            <div class="card" style="background-color: #F4A6A6; color: white; margin-bottom: 15px; border-radius: 10px;">
+                <div class="card-body">
+                    <h5 class="card-title" style="font-weight: bold; color: #FF69B4;">Средний чек</h5>
+                    <p class="card-text" style="font-size: 1.25rem; color: #4B515D;"><strong>{{ average_order_value }} ₽</strong></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

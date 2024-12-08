@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     # Наши приложения
     'users',
     'catalog',
+    'admin_zone',
 ]
 
 MIDDLEWARE = [
