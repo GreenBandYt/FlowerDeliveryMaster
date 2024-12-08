@@ -41,7 +41,7 @@
                     <td>{{ review.id }}</td>
                     <td>{{ review.user.username }}</td>
                     <td>{{ review.product.name }}</td>
-                    <td>{{ review.review_text }}</td> <!-- Исправлено -->
+                    <td>{{ review.text }}</td>
                     <td>{{ review.rating }}</td>
                     <td>{{ review.created_at|date:"d.m.Y H:i" }}</td>
                     <td>

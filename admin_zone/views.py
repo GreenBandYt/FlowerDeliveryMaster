@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from users.models import CustomUser  # Импортируем модель пользователя
-from catalog.models import Order, OrderItem  # Импортируем модели заказов и элементов заказов
+from catalog.models import Order, OrderItem, Review  # Импортируем модели заказов, элементов заказов и отзывов
 from django.db.models import Sum, Avg  # Для аналитических вычислений
 from django.contrib import messages  # Для отображения уведомлений
 
@@ -45,7 +45,21 @@ def manage_reviews(request):
     """
     Представление для управления отзывами.
     """
-    return render(request, 'admin_zone/manage_reviews.html')  # Указываем конкретный путь к шаблону
+    reviews = Review.objects.all()  # Получаем все отзывы
+    return render(request, 'admin_zone/manage_reviews.html', {
+        'reviews': reviews  # Передаем список отзывов в шаблон
+    })
+
+
+# Функция для удаления отзыва
+def delete_review(request, review_id):
+    """
+    Удаление отзыва.
+    """
+    review = get_object_or_404(Review, id=review_id)
+    review.delete()
+    messages.success(request, f"Отзыв #{review_id} успешно удален.")
+    return redirect('admin_zone:reviews')
 
 
 # Функция для просмотра аналитики
