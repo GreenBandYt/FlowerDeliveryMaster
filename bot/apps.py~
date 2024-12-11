@@ -1,0 +1,13 @@
+from django.apps import AppConfig
+import threading  # Для запуска бота в отдельном потоке
+from .bot_logic import main  # Импорт функции main для запуска бота
+
+class BotConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'bot'
+
+    def ready(self):
+        """
+        Запуск Telegram-бота в отдельном потоке при старте сервера.
+        """
+        threading.Thread(target=main, daemon=True).start()

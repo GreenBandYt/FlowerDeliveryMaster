@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'users',
     'catalog',
     'admin_zone',
+    'bot',
 ]
 
 MIDDLEWARE = [
