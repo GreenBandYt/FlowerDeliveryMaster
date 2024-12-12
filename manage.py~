@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """Django's command-line utility for administrative tasks."""
+import asyncio
 import os
 import sys
 import time
@@ -32,15 +33,18 @@ def wait_for_server(url, retries=10, delay=2):
     return False
 
 
-def run_bot():
-    """Функция для запуска Telegram-бота."""
+def start_bot():
+    """Запускает Telegram-бота в отдельном процессе."""
+    logging.info("Попытка запуска Telegram-бота.")
     try:
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "flowerdelivery.settings")
         django.setup()
         from bot.management.commands.run_telegram_bot import Command
-        bot_command = Command()
-        bot_command.run()
-        logging.info("Telegram-бот успешно запущен.")
+        command = Command()
+        # Создаем новый процесс для запуска бота
+        bot_process = Process(target=asyncio.run, args=(command.handle_async(),))
+        bot_process.start()
+        logging.info("Telegram-бот успешно запущен в отдельном процессе.")
     except Exception as e:
         logging.error(f"Ошибка при запуске Telegram-бота: {e}", exc_info=True)
 
@@ -57,7 +61,6 @@ def main():
     """Главная функция."""
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "flowerdelivery.settings")
     if "runserver" in sys.argv:
-        # Проверяем, что это основной процесс
         if os.environ.get('RUN_MAIN') == 'true':
             logging.info("Это перезапуск сервера Django. Логика запуска бота пропущена.")
             run_server()
@@ -70,9 +73,7 @@ def main():
         # Ждём готовности сервера
         if wait_for_server("http://127.0.0.1:8000"):
             logging.info("Сервер готов. Запускаем Telegram-бота.")
-            bot_process = Process(target=run_bot)
-            bot_process.start()
-            bot_process.join()
+            start_bot()
         else:
             logging.error("Сервер не запустился. Завершаем работу.")
             server_process.terminate()

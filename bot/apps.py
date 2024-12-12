@@ -1,5 +1,4 @@
 from django.apps import AppConfig
-import threading  # Для запуска бота в отдельном потоке
 
 
 class BotConfig(AppConfig):
@@ -8,7 +7,6 @@ class BotConfig(AppConfig):
 
     def ready(self):
         """
-        Запуск Telegram-бота в отдельном потоке после полной загрузки приложения.
+        Никакой логики для запуска бота в данный момент
         """
-        from . import bot_runner  # Импортируем функцию для запуска бота внутри ready
-        threading.Thread(target=bot_runner.start_bot, daemon=True).start()
+        pass

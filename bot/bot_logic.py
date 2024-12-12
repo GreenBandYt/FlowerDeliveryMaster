@@ -1,5 +1,11 @@
 from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, ConversationHandler, MessageHandler, filters
+from telegram.ext import (
+    CommandHandler,
+    ContextTypes,
+    ConversationHandler,
+    MessageHandler,
+    filters,
+)
 import os
 from dotenv import load_dotenv
 from users.models import CustomUser  # Импортируем модель CustomUser для взаимодействия с базой данных
@@ -15,7 +21,9 @@ USERNAME, PASSWORD, PHONE, ADDRESS = range(4)
 
 # Команда /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(f"Здравствуйте, {update.effective_user.first_name}! Это бот для доставки цветов.")
+    await update.message.reply_text(
+        f"Здравствуйте, {update.effective_user.first_name}! Это бот для доставки цветов."
+    )
 
 # Команда /link для привязки Telegram аккаунта к логину пользователя
 async def link(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -49,7 +57,7 @@ async def link(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Введите желаемое имя пользователя:",
-        reply_markup=ReplyKeyboardMarkup([["Отмена"]], one_time_keyboard=True)
+        reply_markup=ReplyKeyboardMarkup([["Отмена"]], one_time_keyboard=True),
     )
     return USERNAME
 
@@ -79,7 +87,9 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Валидация телефона
     if not phone.isdigit() or len(phone) < 10:
-        await update.message.reply_text("Ошибка: номер телефона должен содержать только цифры и быть не короче 10 символов.")
+        await update.message.reply_text(
+            "Ошибка: номер телефона должен содержать только цифры и быть не короче 10 символов."
+        )
         return PHONE
 
     await update.message.reply_text("Введите ваш адрес:")
@@ -96,12 +106,14 @@ async def get_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
             password=user_data['password'],
             telegram_id=update.effective_user.id,
             phone_number=user_data['phone'],
-            address=address
+            address=address,
         )
         await sync_to_async(user.save)()
         await update.message.reply_text("Регистрация успешна! Теперь вы можете использовать бота.")
     except IntegrityError:
-        await update.message.reply_text("Ошибка: такое имя пользователя уже существует. Попробуйте снова.")
+        await update.message.reply_text(
+            "Ошибка: такое имя пользователя уже существует. Попробуйте снова."
+        )
     except Exception as e:
         await update.message.reply_text(f"Произошла ошибка: {e}")
 
@@ -112,14 +124,12 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Регистрация отменена.")
     return ConversationHandler.END
 
-# Основная функция для запуска бота
-def main():
-    application = ApplicationBuilder().token(TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("link", link))  # Регистрируем команду /link
-
-    # Регистрация ConversationHandler для команды /register
-    registration_handler = ConversationHandler(
+# Функция для возврата ConversationHandler для регистрации
+def get_registration_handler():
+    """
+    Возвращает ConversationHandler для регистрации пользователя.
+    """
+    return ConversationHandler(
         entry_points=[CommandHandler("register", register)],
         states={
             USERNAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_username)],
@@ -129,9 +139,3 @@ def main():
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
-    application.add_handler(registration_handler)
-
-    application.run_polling()
-
-if __name__ == "__main__":
-    main()

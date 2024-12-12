@@ -4,13 +4,14 @@ from telegram.ext import ApplicationBuilder, CommandHandler
 import os
 import logging
 from dotenv import load_dotenv
+import asyncio
 
 
 class Command(BaseCommand):
     help = "Запускает Telegram-бота"
 
-    def run(self):
-        """Метод для запуска бота в отдельном процессе."""
+    async def handle_async(self):
+        """Асинхронный метод для запуска бота."""
         # Загрузка токена
         load_dotenv()
         token = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -27,4 +28,4 @@ class Command(BaseCommand):
         application.add_handler(get_registration_handler())
 
         logging.info("Запуск Telegram-бота...")
-        application.run_polling()
+        await application.run_polling()
