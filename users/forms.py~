@@ -5,7 +5,7 @@ import re
 class CustomUserCreationForm(forms.ModelForm):
     phone_number = forms.CharField(
         label='Номер телефона',
-        max_length=16,
+        max_length=15,
         help_text='Введите номер телефона в формате +7(XXX)XXX-XX-XX.',
         widget=forms.TextInput(attrs={
             'pattern': r'\+7\(\d{3}\)\d{3}-\d{2}-\d{2}',  # HTML5-проверка формата

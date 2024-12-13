@@ -130,6 +130,7 @@ STATICFILES_DIRS = [
 
 # URL для перенаправления после успешного входа
 LOGIN_REDIRECT_URL = '/catalog/'
+LOGIN_URL = '/users/login/'  # Новый параметр для страницы входа
 
 # Настройки для медиафайлов
 MEDIA_URL = '/media/'
@@ -142,3 +143,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Настройка кастомной модели пользователя
 AUTH_USER_MODEL = 'users.CustomUser'
+
+
+# Настройки отправки писем через Yandex
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.yandex.ru'
+EMAIL_PORT = 465
+EMAIL_USE_SSL = True  # Для Yandex требуется SSL
+EMAIL_HOST_USER = 'BanduraYV@yandex.ru'  # Ваш адрес электронной почты Yandex
+EMAIL_HOST_PASSWORD = 'glutmugaceazuetm'  # Пароль от почты Yandex
+
+# Адрес отправителя
+DEFAULT_FROM_EMAIL = 'BanduraYV@yandex.ru'

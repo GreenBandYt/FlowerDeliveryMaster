@@ -65,10 +65,10 @@ def register(request):
             # Автоматический вход пользователя
             login(request, user)
 
-            # messages.success(
-            #     request,
-            #     'Ваш аккаунт успешно создан! Проверьте электронную почту для получения инструкции по привязке Telegram-аккаунта.'
-            # )
+            messages.success(
+                request,
+                'Ваш аккаунт успешно создан! Проверьте электронную почту для получения инструкции по привязке Telegram-аккаунта.'
+            )
             return redirect('telegram_info')  # Перенаправляем на страницу с информацией о Telegram-боте
         else:
             messages.error(request, 'Пожалуйста, исправьте ошибки в форме.')

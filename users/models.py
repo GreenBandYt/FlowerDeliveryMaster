@@ -3,9 +3,10 @@ from django.db import models
 
 class CustomUser(AbstractUser):
     phone_number = models.CharField(
-        max_length=15,
-        blank=True,
-        null=True,
+        max_length=16,
+        unique=True,  # Добавлено требование уникальности
+        null=False,   # Поле обязательно
+        blank=False,  # Поле обязательно
         verbose_name="Phone Number"
     )
     address = models.TextField(
