@@ -99,7 +99,6 @@ class Order(models.Model):
     )  # Статус заказа
     total_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Total Price")  # Общая стоимость заказа
     notes = models.TextField(blank=True, null=True, verbose_name="Order Notes")  # Заметки к заказу
-    address = models.TextField(blank=True, null=True, verbose_name="Address")  # Адрес доставки
 
     def __str__(self):
         return f"Order {self.id} by {self.user}"  # Строковое представление заказа

@@ -35,4 +35,4 @@ def start_bot():
     except Exception as e:
         print(f"Ошибка при запуске Telegram-бота: {e}")
     finally:
-        print("Завершение работы Telegram-бота.")
+        # print("Завершение работы Telegram-бота.")

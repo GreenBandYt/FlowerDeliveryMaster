@@ -121,11 +121,18 @@ def checkout(request):
     if request.method == 'POST':
         form = OrderForm(request.POST)
         if form.is_valid():
+            # Сохранение адреса в профиль пользователя, если изменён
+            new_address = form.cleaned_data.get('address', '').strip()
+            if new_address and new_address != getattr(request.user, 'address', ''):
+                request.user.address = new_address
+                request.user.save()
+
             # Создание нового заказа
             order = Order.objects.create(
                 user=request.user,
                 total_price=cart.get_total_price(),
                 notes=form.cleaned_data.get('comments'),
+                address=new_address,  # Сохранение адреса в заказе
             )
 
             # Перенос элементов из корзины в заказ

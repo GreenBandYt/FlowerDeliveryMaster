@@ -197,3 +197,9 @@ def delete_order(request, order_id):
         messages.success(request, f"Заказ {order_id} успешно удалён.")
     return redirect('catalog:order_history')  # Перенаправляем на историю заказов
 
+@user_passes_test(lambda u: u.is_staff)  # Декоратор: доступ только для администраторов
+def admin_dashboard(request):
+    """
+    Страница административной панели.
+    """
+    return render(request, 'catalog/admin_dashboard.html', {})  # Заглушка шаблона
