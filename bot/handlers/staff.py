@@ -1,4 +1,4 @@
-from telegram import ReplyKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler, MessageHandler, filters
 from asgiref.sync import sync_to_async
 from catalog.models import Order  # Импортируем модель заказов
@@ -7,7 +7,39 @@ from users.models import CustomUser  # Импортируем модель по�
 # Состояния для ConversationHandler
 ORDER_ID, NEW_STATUS = range(2)
 
-async def start_update_status(update, context: ContextTypes.DEFAULT_TYPE):
+async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Обработчик команды /orders: выводит список активных заказов для сотрудников.
+    """
+    telegram_id = update.effective_user.id
+
+    try:
+        # Проверяем, является ли пользователь сотрудником
+        user = await sync_to_async(CustomUser.objects.get)(telegram_id=telegram_id)
+
+        if not user.is_staff:
+            await update.message.reply_text("У вас нет доступа к этой команде.")
+            return
+
+        # Получаем активные заказы
+        active_orders = await sync_to_async(Order.objects.filter)(status='created')
+
+        if not active_orders.exists():
+            await update.message.reply_text("Нет активных заказов.")
+            return
+
+        # Формируем сообщение со списком заказов
+        orders_list = "\n".join(
+            [f"Заказ #{order.id}: {order.total_price} руб. (Статус: {order.status})" for order in active_orders]
+        )
+        await update.message.reply_text(f"Активные заказы:\n{orders_list}")
+
+    except CustomUser.DoesNotExist:
+        await update.message.reply_text("Ваш аккаунт не найден в системе.")
+    except Exception as e:
+        await update.message.reply_text(f"Произошла ошибка: {e}")
+
+async def start_update_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Начинает процесс обновления статуса заказа.
     """
@@ -31,15 +63,15 @@ async def start_update_status(update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"Произошла ошибка: {e}")
         return ConversationHandler.END
 
-async def get_order_id(update, context: ContextTypes.DEFAULT_TYPE):
+async def get_order_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Получает ID заказа и запрашивает новый статус.
     """
     order_id = update.message.text
     context.user_data['order_id'] = order_id
 
+    # Проверяем, существует ли заказ
     try:
-        # Проверяем, существует ли заказ
         order = await sync_to_async(Order.objects.get)(id=order_id)
 
         # Предлагаем выбрать новый статус
@@ -47,7 +79,7 @@ async def get_order_id(update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [[status] for status in statuses]
         await update.message.reply_text(
             "Выберите новый статус заказа:",
-            reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True),
+            reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
         )
         return NEW_STATUS
 
@@ -58,7 +90,7 @@ async def get_order_id(update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"Произошла ошибка: {e}")
         return ConversationHandler.END
 
-async def update_order_status(update, context: ContextTypes.DEFAULT_TYPE):
+async def update_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Обновляет статус заказа.
     """
@@ -82,7 +114,7 @@ async def update_order_status(update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"Произошла ошибка: {e}")
         return ConversationHandler.END
 
-async def cancel(update, context: ContextTypes.DEFAULT_TYPE):
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Обрабатывает отмену операции.
     """
@@ -94,10 +126,10 @@ def get_update_status_handler():
     Возвращает ConversationHandler для обновления статуса заказа.
     """
     return ConversationHandler(
-        entry_points=[MessageHandler(filters.COMMAND & filters.Regex("^/update_status$"), start_update_status)],
+        entry_points=[CommandHandler("update_status", start_update_status)],
         states={
             ORDER_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_order_id)],
             NEW_STATUS: [MessageHandler(filters.TEXT & ~filters.COMMAND, update_order_status)],
         },
-        fallbacks=[MessageHandler(filters.COMMAND & filters.Regex("^/cancel$"), cancel)],
+        fallbacks=[CommandHandler("cancel", cancel)],
     )

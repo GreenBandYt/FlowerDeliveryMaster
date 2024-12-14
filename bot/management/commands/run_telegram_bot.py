@@ -1,6 +1,8 @@
 from django.core.management.base import BaseCommand
-from bot.bot_logic import start, link, get_registration_handler
 from telegram.ext import ApplicationBuilder, CommandHandler
+from bot.handlers.common import start  # Импорт команды /start
+from bot.handlers.common import link, get_registration_handler
+
 import os
 import logging
 from dotenv import load_dotenv
