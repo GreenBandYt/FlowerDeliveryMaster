@@ -1,8 +1,15 @@
 from telegram import ReplyKeyboardMarkup
-from telegram.ext import ContextTypes, ConversationHandler, MessageHandler, filters
+from telegram.ext import (
+    ContextTypes,
+    ConversationHandler,
+    MessageHandler,
+    CommandHandler,
+    filters,
+)
 from asgiref.sync import sync_to_async
 from catalog.models import Order  # Импортируем модель заказов
 from users.models import CustomUser  # Импортируем модель пользователей
+from bot.handlers.customer import view_orders  # Импортируем функцию для команды /view_orders
 
 # Состояния для ConversationHandler
 ORDER_ID, NEW_STATUS = range(2)
@@ -101,3 +108,11 @@ def get_update_status_handler():
         },
         fallbacks=[MessageHandler(filters.COMMAND & filters.Regex("^/cancel$"), cancel)],
     )
+
+# Регистрация команды /view_orders
+def register_handlers(application):
+    """
+    Регистрирует все обработчики команд в приложении.
+    """
+    application.add_handler(CommandHandler("view_orders", view_orders))  # Команда для просмотра заказов
+    application.add_handler(get_update_status_handler())  # Команда для обновления статуса
