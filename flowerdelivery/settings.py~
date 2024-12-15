@@ -130,7 +130,6 @@ STATICFILES_DIRS = [
 
 # URL для перенаправления после успешного входа
 LOGIN_REDIRECT_URL = '/catalog/'
-LOGIN_URL = '/users/login/'  # Новый параметр для страницы входа
 
 # Настройки для медиафайлов
 MEDIA_URL = '/media/'
