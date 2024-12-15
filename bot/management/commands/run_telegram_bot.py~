@@ -9,7 +9,8 @@ import logging
 from dotenv import load_dotenv
 
 # Файл-флаг для проверки состояния бота
-BOT_LOCK_FILE = "/tmp/telegram_bot.lock"
+# Динамическое определение пути для временного файла
+# BOT_LOCK_FILE = os.path.join(tempfile.gettempdir(), "telegram_bot.lock")
 
 
 class Command(BaseCommand):
