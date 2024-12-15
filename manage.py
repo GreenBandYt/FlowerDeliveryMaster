@@ -15,6 +15,9 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
 )
 
+# Глобальная переменная для отслеживания состояния бота
+is_bot_running = False
+
 
 def wait_for_server(url, retries=10, delay=2):
     """Проверяет доступность сервера по указанному URL."""
@@ -34,15 +37,23 @@ def wait_for_server(url, retries=10, delay=2):
 
 def run_bot():
     """Функция для запуска Telegram-бота."""
+    global is_bot_running  # Указываем, что будем менять глобальную переменную
+    if is_bot_running:
+        logging.info("Бот уже запущен. Повторный запуск не требуется.")
+        return
+
     try:
+        is_bot_running = True  # Устанавливаем статус в True
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "flowerdelivery.settings")
         django.setup()
         from bot.management.commands.run_telegram_bot import Command
         bot_command = Command()
         bot_command.run()
-        logging.info("Telegram-бот успешно запущен.")
     except Exception as e:
         logging.error(f"Ошибка при запуске Telegram-бота: {e}", exc_info=True)
+    finally:
+        is_bot_running = False  # Сбрасываем статус в False при завершении работы
+        logging.info("Telegram-бот завершил работу.")
 
 
 def run_server():
