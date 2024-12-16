@@ -12,6 +12,16 @@ from dotenv import load_dotenv
 from users.models import CustomUser  # Импортируем модель CustomUser для взаимодействия с базой данных
 from django.db.utils import IntegrityError
 from asgiref.sync import sync_to_async  # Для работы с асинхронным контекстом
+from prettytable import PrettyTable
+from catalog.models import Order
+
+
+import logging
+
+
+# Настройка логгера
+logger = logging.getLogger(__name__)
+
 
 # Загружаем переменные из .env
 load_dotenv()
@@ -178,3 +188,61 @@ def get_registration_handler():
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
+
+# Команда /orders для управления заказами
+async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    telegram_id = update.effective_user.id
+
+    try:
+        # Проверяем пользователя
+        logger.info(f"Обработчик команды /orders запущен для пользователя {update.effective_user.username} ({telegram_id})")
+        user = await sync_to_async(CustomUser.objects.get)(telegram_id=telegram_id)
+        logger.info(f"Пользователь найден: {user.username} (ID: {user.id})")
+
+        # Проверяем права доступа
+        if not (user.is_superuser or user.is_staff):
+            logger.warning(f"Доступ к /orders запрещен для {user.username} ({telegram_id}).")
+            await update.message.reply_text("У вас нет доступа к этой команде.")
+            return
+
+        # Загружаем заказы
+        logger.info("Загрузка заказов из базы данных...")
+        all_orders = await sync_to_async(lambda: list(Order.objects.select_related('user').all()))()
+
+        logger.info(f"Найдено заказов: {len(all_orders)}")
+
+        if not all_orders:
+            logger.info("Нет заказов в базе данных.")
+            await update.message.reply_text("Заказов пока нет.")
+            return
+
+        # Формируем таблицу
+        logger.info(f"Формирование таблицы заказов...")
+        table = PrettyTable(["ID", "Дата", "Статус", "Сумма", "Клиент"])
+        for order in all_orders:
+            table.add_row([
+                order.id,
+                order.created_at.strftime("%Y-%m-%d %H:%M"),
+                order.get_status_display() if hasattr(order, 'get_status_display') else order.status,
+                f"{order.total_price:.2f} руб." if order.total_price else "0.00 руб.",
+                order.user.username if order.user else "Не указан"
+            ])
+
+        # Отправка таблицы
+        table_str = table.get_string()
+        max_message_length = 4000
+        if len(table_str) > max_message_length:
+            chunks = [table_str[i:i + max_message_length] for i in range(0, len(table_str), max_message_length)]
+            for chunk in chunks:
+                await update.message.reply_text(f"```\n{chunk}\n```", parse_mode="Markdown")
+        else:
+            await update.message.reply_text(f"Все заказы:\n```\n{table_str}\n```", parse_mode="Markdown")
+
+        logger.info(f"Таблица заказов успешно отправлена для пользователя {user.username} ({telegram_id}).")
+
+    except CustomUser.DoesNotExist:
+        logger.warning(f"Пользователь с telegram_id={telegram_id} не найден.")
+        await update.message.reply_text("Ваш аккаунт не зарегистрирован в системе.")
+    except Exception as e:
+        logger.error(f"Ошибка в обработке команды /orders: {e}", exc_info=True)
+        await update.message.reply_text("Произошла ошибка при получении заказов.")
