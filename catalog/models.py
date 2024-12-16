@@ -1,26 +1,29 @@
 from django.db import models
 from django.conf import settings
-from django.db.models import Avg  # Импорт для вычисления среднего значения
+from django.db.models import Avg
+import asyncio
+import importlib
+import logging
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+logger = logging.getLogger(__name__)
 
 # Модель продукта
 class Product(models.Model):
-    name = models.CharField(max_length=200, verbose_name="Product Name")  # Название продукта
-    description = models.TextField(blank=True, verbose_name="Description")  # Описание продукта
-    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Price")  # Цена продукта
-    image = models.ImageField(upload_to='products/', blank=True, null=True, verbose_name="Image")  # Изображение продукта
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")  # Дата создания записи
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")  # Дата последнего обновления записи
+    name = models.CharField(max_length=200, verbose_name="Product Name")
+    description = models.TextField(blank=True, verbose_name="Description")
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Price")
+    image = models.ImageField(upload_to='products/', blank=True, null=True, verbose_name="Image")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
 
     def get_average_rating(self):
-        """
-        Возвращает средний рейтинг продукта, округлённый до 1 знака после запятой.
-        Если отзывов нет, возвращает 'Нет рейтинга'.
-        """
-        average = self.reviews.aggregate(Avg('rating'))['rating__avg']  # Используем related_name "reviews"
+        average = self.reviews.aggregate(Avg('rating'))['rating__avg']
         return round(average, 1) if average else 'Нет рейтинга'
 
     def __str__(self):
-        return self.name  # Возвращает строковое представление продукта
+        return self.name
 
 
 # Модель корзины
@@ -31,18 +34,15 @@ class Cart(models.Model):
         null=True,
         blank=True,
         verbose_name="User"
-    )  # Связь корзины с пользователем (может быть пустой, если пользователь анонимный)
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")  # Дата создания корзины
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")  # Дата последнего обновления корзины
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
 
     def get_total_price(self):
-        """
-        Рассчитывает общую стоимость всех товаров в корзине.
-        """
         return sum(item.price for item in self.items.all())
 
     def __str__(self):
-        return f"Cart {self.id} for {self.user if self.user else 'Anonymous'}"  # Возвращает строковое представление корзины
+        return f"Cart {self.id} for {self.user if self.user else 'Anonymous'}"
 
 
 # Модель элемента корзины
@@ -52,57 +52,50 @@ class CartItem(models.Model):
         related_name="items",
         on_delete=models.CASCADE,
         verbose_name="Cart"
-    )  # Связь элемента корзины с корзиной
+    )
     product = models.ForeignKey(
         Product,
         on_delete=models.CASCADE,
         verbose_name="Product"
-    )  # Связь элемента корзины с продуктом
-    quantity = models.PositiveIntegerField(default=1, verbose_name="Quantity")  # Количество продукта
-    price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        verbose_name="Total Price"
-    )  # Итоговая стоимость элемента корзины
+    )
+    quantity = models.PositiveIntegerField(default=1, verbose_name="Quantity")
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Total Price")
 
     def save(self, *args, **kwargs):
-        """
-        Переопределяет метод сохранения для автоматического расчета итоговой стоимости.
-        """
         self.price = self.product.price * self.quantity
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.quantity} x {self.product.name} in Cart {self.cart.id}"  # Строковое представление элемента корзины
+        return f"{self.quantity} x {self.product.name} in Cart {self.cart.id}"
 
 
 # Модель заказа
 class Order(models.Model):
     STATUS_CHOICES = [
-        ('created', 'Created'),  # Заказ создан
-        ('processed', 'Processed'),  # Заказ в обработке
-        ('shipped', 'Shipped'),  # Заказ отправлен
-        ('delivered', 'Delivered'),  # Заказ доставлен
+        ('created', 'Created'),
+        ('processed', 'Processed'),
+        ('shipped', 'Shipped'),
+        ('delivered', 'Delivered'),
     ]
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         verbose_name="User"
-    )  # Связь заказа с пользователем
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")  # Дата создания заказа
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default='created',
         verbose_name="Order Status"
-    )  # Статус заказа
-    total_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Total Price")  # Общая стоимость заказа
-    notes = models.TextField(blank=True, null=True, verbose_name="Order Notes")  # Заметки к заказу
-    address = models.TextField(blank=True, null=True, verbose_name="Address")  # Адрес доставки
+    )
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Total Price")
+    notes = models.TextField(blank=True, null=True, verbose_name="Order Notes")
+    address = models.TextField(blank=True, null=True, verbose_name="Address")
 
     def __str__(self):
-        return f"Order {self.id} by {self.user}"  # Строковое представление заказа
+        return f"Order {self.id} by {self.user}"
 
 
 # Модель элемента заказа
@@ -112,28 +105,21 @@ class OrderItem(models.Model):
         related_name="items",
         on_delete=models.CASCADE,
         verbose_name="Order"
-    )  # Связь элемента заказа с заказом
+    )
     product = models.ForeignKey(
         Product,
         on_delete=models.CASCADE,
         verbose_name="Product"
-    )  # Связь элемента заказа с продуктом
-    quantity = models.PositiveIntegerField(default=1, verbose_name="Quantity")  # Количество продукта
-    price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        verbose_name="Total Price"
-    )  # Итоговая стоимость элемента заказа
+    )
+    quantity = models.PositiveIntegerField(default=1, verbose_name="Quantity")
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Total Price")
 
     def save(self, *args, **kwargs):
-        """
-        Переопределяет метод сохранения для автоматического расчета итоговой стоимости.
-        """
         self.price = self.product.price * self.quantity
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.quantity} x {self.product.name} in Order {self.order.id}"  # Строковое представление элемента заказа
+        return f"{self.quantity} x {self.product.name} in Order {self.order.id}"
 
 
 # Модель отзывов
@@ -142,24 +128,39 @@ class Review(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         verbose_name="User"
-    )  # Связь отзыва с пользователем
+    )
     product = models.ForeignKey(
         Product,
         related_name="reviews",
         on_delete=models.CASCADE,
         verbose_name="Product"
-    )  # Связь отзыва с продуктом
+    )
     rating = models.PositiveIntegerField(
         verbose_name="Rating",
         default=1,
-        choices=[(i, i) for i in range(1, 6)]  # Рейтинг от 1 до 5
-    )  # Оценка
-    review_text = models.TextField(
-        blank=True,
-        null=True,
-        verbose_name="Review Text"
-    )  # Текст отзыва
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")  # Дата создания отзыва
+        choices=[(i, i) for i in range(1, 6)]
+    )
+    review_text = models.TextField(blank=True, null=True, verbose_name="Review Text")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
 
     def __str__(self):
-        return f"Review by {self.user} on {self.product.name}"  # Строковое представление отзыва
+        return f"Review by {self.user} on {self.product.name}"
+
+
+@receiver(post_save, sender=Order)
+def notify_new_order(sender, instance, created, **kwargs):
+    """
+    Сигнал для отправки уведомления о новом заказе всем сотрудникам.
+    """
+    if created:
+        logger.info(f"Сигнал сработал: создан заказ #{instance.id}")
+        try:
+            # Динамический импорт функции
+            bot_logic = importlib.import_module('bot.bot_logic')
+            send_new_order_notification = getattr(bot_logic, 'send_new_order_notification')
+
+            # Вызов функции напрямую
+            send_new_order_notification(instance)
+
+        except Exception as e:
+            logger.error(f"Ошибка при отправке уведомления о заказе: {e}", exc_info=True)

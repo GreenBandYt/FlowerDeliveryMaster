@@ -300,14 +300,10 @@ async def manage_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
 async def update_user_is_staff(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Обработчик для ввода ID пользователя и отображения кнопок смены статуса, включая "Отмена".
-    """
     try:
         user_id = int(update.message.text)
         user = await sync_to_async(CustomUser.objects.get)(id=user_id, is_superuser=False)
 
-        # Формируем сообщение и inline-кнопки
         status = "Сотрудник" if user.is_staff else "Клиент"
         user_info = (
             f"👤 **Пользователь #{user.id}**\n"
@@ -319,7 +315,6 @@ async def update_user_is_staff(update: Update, context: ContextTypes.DEFAULT_TYP
         keyboard = [
             [InlineKeyboardButton("Сделать сотрудником", callback_data=f"staff_{user.id}_true")],
             [InlineKeyboardButton("Сделать клиентом", callback_data=f"staff_{user.id}_false")],
-            [InlineKeyboardButton("Отмена", callback_data=f"cancel_user_status_{user.id}")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -337,26 +332,13 @@ async def update_user_is_staff(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_text("Произошла ошибка.")
         return ConversationHandler.END
 
-
 async def update_user_status_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Callback-обработчик для смены статуса is_staff или отмены.
-    """
     query = update.callback_query
     await query.answer()
-
     try:
-        callback_data = query.data
-        if callback_data.startswith("cancel_user_status_"):
-            # Обработка нажатия "Отмена"
-            await query.delete_message()  # Удаляем сообщение с кнопками
-            return
-
-        # Извлекаем ID пользователя и новый статус
-        _, user_id, is_staff = callback_data.split("_")
+        _, user_id, is_staff = query.data.split("_")
         user = await sync_to_async(CustomUser.objects.get)(id=user_id)
 
-        # Обновляем статус is_staff
         user.is_staff = is_staff == "true"
         await sync_to_async(user.save)()
 
