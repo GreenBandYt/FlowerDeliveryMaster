@@ -15,9 +15,11 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 from bot.bot_logic import (
     orders, order_details, update_order_status,
     manage_users, update_user_is_staff, update_user_status_callback,
-    take_order  # Импортируем обработчик кнопки "Взять в работу"
+    take_order,  # Импортируем обработчик кнопки "Взять в работу"
+    get_analytics_handler # Обработчик аналитики
 )
 from bot.handlers.common import start, link, get_registration_handler  # Основные обработчики
+# from bot.handlers.analytics import get_analytics_handler  # Обработчик аналитики
 
 # Настройка логгера
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -76,11 +78,13 @@ async def run_bot():
         application.add_handler(CallbackQueryHandler(update_user_status_callback, pattern=r"^staff_\d+_(true|false)$"))
 
         # Callback-обработчик для кнопки "Взять в работу"
-        # Этот обработчик используется для уведомлений о взятии заказа в работу
         application.add_handler(CallbackQueryHandler(take_order, pattern=r"^take_order_\d+$"))
 
         # Обработчик регистрации
         application.add_handler(get_registration_handler())
+
+        # Обработчик для аналитики
+        application.add_handler(get_analytics_handler())
 
         logger.info("Запуск Telegram-бота. Ожидание команд...")
         await application.run_polling()

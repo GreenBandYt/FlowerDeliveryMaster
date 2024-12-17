@@ -7,15 +7,20 @@ from telegram.ext import (
     MessageHandler,
     filters,
     Application,
+    CallbackQueryHandler,
+    CallbackContext,
+    ConversationHandler,
 )
 import os
 import re
 import asyncio
+from datetime import datetime, timedelta  # Добавьте этот импорт
+from django.db.models import Sum, Avg
 from dotenv import load_dotenv
 from users.models import CustomUser
 from django.db.utils import IntegrityError
 from prettytable import PrettyTable
-from catalog.models import Order
+from catalog.models import Order, OrderItem
 import logging
 
 # Настройка логгера
@@ -456,3 +461,98 @@ async def take_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Ошибка в take_order: {e}", exc_info=True)
         await query.edit_message_text("Произошла ошибка при обработке заказа.")
+
+# Определяем состояния для ConversationHandler
+CHOOSE_PERIOD, EXIT_ANALYTICS = range(2)
+
+
+# Создание кнопок для выбора периода аналитики
+def get_analytics_buttons():
+    keyboard = [
+        [InlineKeyboardButton("Сегодня", callback_data="analytics_today")],
+        [InlineKeyboardButton("Последние 7 дней", callback_data="analytics_week")],
+        [InlineKeyboardButton("Текущий месяц", callback_data="analytics_month")],
+        [InlineKeyboardButton("Текущий год", callback_data="analytics_year")],
+        [InlineKeyboardButton("Всё время", callback_data="analytics_all")],
+        [InlineKeyboardButton("Отмена", callback_data="analytics_cancel")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+# Команда /analytics
+async def analytics(update: Update, context: CallbackContext) -> int:
+    """
+    Начало аналитики: отправляем кнопки для выбора периода.
+    """
+    await update.message.reply_text(
+        text=f"📊 **Аналитика:**\n\nВыберите период:",
+        reply_markup=get_analytics_buttons(),
+        parse_mode="Markdown"
+    )
+    return CHOOSE_PERIOD
+
+
+# Обработчик выбора периода
+async def analytics_period_handler(update: Update, context: CallbackContext) -> int:
+    """
+    Обрабатывает выбор периода и отправляет данные аналитики.
+    """
+    query = update.callback_query
+    await query.answer()
+
+    # Определяем период на основе callback_data
+    period = query.data
+    if period == "analytics_cancel":
+        await query.edit_message_text("🔙 Вы вышли из меню аналитики.")
+        return ConversationHandler.END
+
+    title = ""
+    filter_kwargs = {}
+
+    # Установка фильтра на период
+    if period == "analytics_today":
+        filter_kwargs = {"created_at__date": datetime.now().date()}
+        title = "Сегодня"
+    elif period == "analytics_week":
+        filter_kwargs = {"created_at__gte": datetime.now().date() - timedelta(days=7)}
+        title = "Последние 7 дней"
+    elif period == "analytics_month":
+        filter_kwargs = {
+            "created_at__month": datetime.now().month,
+            "created_at__year": datetime.now().year,
+        }
+        title = "Текущий месяц"
+    elif period == "analytics_year":
+        filter_kwargs = {"created_at__year": datetime.now().year}
+        title = "Текущий год"
+    elif period == "analytics_all":
+        filter_kwargs = {}
+        title = "Всё время"
+
+    # Подсчет значений
+    total_orders = await sync_to_async(lambda: Order.objects.filter(**filter_kwargs).count())()
+    total_revenue = await sync_to_async(lambda: sum(order.total_price for order in Order.objects.filter(**filter_kwargs)))()
+    average_order_value = total_revenue / total_orders if total_orders > 0 else 0
+    total_users = await sync_to_async(lambda: CustomUser.objects.count())()
+
+    # Формируем текст аналитики
+    analytics_text = (
+        f"📊 **Аналитика за {title}:**\n\n"
+        f"👤 Пользователи: **{total_users}**\n"
+        f"📦 Всего заказов: **{total_orders}**\n"
+        f"💰 Общий доход: **{total_revenue or 0:.2f} ₽**\n"
+        f"🧾 Средний чек: **{average_order_value or 0:.2f} ₽**"
+    )
+    await query.edit_message_text(analytics_text, parse_mode="Markdown")
+    return ConversationHandler.END
+
+
+# ConversationHandler для аналитики
+def get_analytics_handler():
+    return ConversationHandler(
+        entry_points=[CommandHandler("analytics", analytics)],
+        states={
+            CHOOSE_PERIOD: [CallbackQueryHandler(analytics_period_handler)],
+        },
+        fallbacks=[CallbackQueryHandler(analytics_period_handler)],
+    )
