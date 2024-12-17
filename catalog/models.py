@@ -94,6 +94,7 @@ class Order(models.Model):
     total_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Total Price")
     notes = models.TextField(blank=True, null=True, verbose_name="Order Notes")
     address = models.TextField(blank=True, null=True, verbose_name="Address")
+    is_ready = models.BooleanField(default=False, verbose_name="Order Ready")  # Добавлено новое поле
 
     class Meta:
         db_table = "catalog_order"  # Явно указываем имя таблицы для Order
@@ -153,6 +154,7 @@ class Review(models.Model):
         return f"Review by {self.user} on {self.product.name}"
 
 
+# Сигнал для уведомления о новом заказе
 @receiver(post_save, sender=OrderItem)
 def notify_order_items_saved(sender, instance, created, **kwargs):
     """
@@ -161,11 +163,10 @@ def notify_order_items_saved(sender, instance, created, **kwargs):
     if created:
         logger.info(f"Добавлена позиция {instance.product.name} в заказ #{instance.order.id}")
 
-        # Проверка, что все позиции заказа добавлены
         def send_notification():
             order = instance.order
-            total_items = order.items.count()
-            if total_items > 0:
+            total_items_price = sum(item.price for item in order.items.all())
+            if total_items_price == order.total_price:  # Проверка суммы позиций заказа
                 logger.info(f"Все позиции добавлены в заказ #{order.id}. Отправляем уведомление.")
                 try:
                     bot_logic = importlib.import_module('bot.bot_logic')
@@ -175,4 +176,3 @@ def notify_order_items_saved(sender, instance, created, **kwargs):
                     logger.error(f"Ошибка при отправке уведомления: {e}", exc_info=True)
 
         transaction.on_commit(send_notification)
-
