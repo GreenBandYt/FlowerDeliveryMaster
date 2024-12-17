@@ -20,6 +20,8 @@
         </div>
     </div>
 
+    <!-- Подпись о периоде -->
+    <h3 class="mt-4" style="color: #4B515D;">Данные за весь период</h3>
     <div class="row">
         <!-- Карточка Пользователи -->
         <div class="col-md-3">
@@ -60,6 +62,52 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Таблица аналитики по периодам -->
+    <h3 class="mt-5" style="color: #4B515D;">Аналитика по периодам</h3>
+    <div class="table-responsive">
+        <table class="table table-bordered">
+            <thead class="thead-light">
+                <tr>
+                    <th>Период</th>
+                    <th>Пользователи</th>
+                    <th>Всего заказов</th>
+                    <th>Общий доход</th>
+                    <th>Средний чек</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Сегодня</td>
+                    <td>{{ users_today }}</td>
+                    <td>{{ orders_today }}</td>
+                    <td>{{ revenue_today }} ₽</td>
+                    <td>{{ average_today }} ₽</td>
+                </tr>
+                <tr>
+                    <td>Последние 7 дней</td>
+                    <td>{{ users_week }}</td>
+                    <td>{{ orders_week }}</td>
+                    <td>{{ revenue_week }} ₽</td>
+                    <td>{{ average_week }} ₽</td>
+                </tr>
+                <tr>
+                    <td>Текущий месяц</td>
+                    <td>{{ users_month }}</td>
+                    <td>{{ orders_month }}</td>
+                    <td>{{ revenue_month }} ₽</td>
+                    <td>{{ average_month }} ₽</td>
+                </tr>
+                <tr>
+                    <td>Текущий год</td>
+                    <td>{{ users_year }}</td>
+                    <td>{{ orders_year }}</td>
+                    <td>{{ revenue_year }} ₽</td>
+                    <td>{{ average_year }} ₽</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}
