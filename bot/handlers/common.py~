@@ -188,65 +188,53 @@ def get_registration_handler():
 
 
 async def my_orders(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    logger.info(f"Пользователь {update.effective_user.id} ввел команду /my_orders.")
     telegram_id = update.effective_user.id
     try:
         user = await sync_to_async(CustomUser.objects.get)(telegram_id=telegram_id, is_staff=True)
         orders = await sync_to_async(lambda: list(Order.objects.filter(status="processing", user_id=user.id)))()
-
         if not orders:
-            await update.message.reply_text("\U0000274C У вас нет активных заказов в работе.")
+            await update.message.reply_text("У вас нет активных заказов.")
             return ConversationHandler.END
 
-        # Создание таблицы заказов
-        table = PrettyTable(["#", "ID Заказа", "Сумма", "Адрес"])
-        table.align["Адрес"] = "l"
-        for idx, order in enumerate(orders, start=1):
-            table.add_row([idx, order.id, f"{order.total_price:.2f} руб.", order.address or "Не указан"])
+        table_rows = "\n".join(
+            f"{idx}. ID: {order.id}, Сумма: {order.total_price:.2f} руб., Адрес: {order.address or 'Не указан'}"
+            for idx, order in enumerate(orders, start=1)
+        )
+        await update.message.reply_text(f"Ваши текущие заказы:\n{table_rows}")
+        await update.message.reply_text("Введите ID заказа, чтобы завершить его, или отправьте /cancel.")
 
-        await update.message.reply_text(
-            f"Ваши текущие заказы в работе:\n<pre>{table}</pre>",
-            parse_mode="HTML"
-        )
-        await update.message.reply_text(
-            "Введите **ID заказа**, чтобы завершить его, или отправьте /cancel.",
-            parse_mode="Markdown"
-        )
+        logger.info(f"Установлено состояние AWAIT_ORDER_ID для пользователя {update.effective_user.id}")
         return AWAIT_ORDER_ID
-
     except CustomUser.DoesNotExist:
-        await update.message.reply_text("\U0000274C У вас нет прав для выполнения этой команды.")
+        await update.message.reply_text("У вас нет прав для выполнения этой команды.")
         return ConversationHandler.END
 
-async def ask_complete_order(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    try:
-        order_id = int(update.message.text.strip())  # Проверка корректности ввода
-        telegram_id = update.effective_user.id
 
-        # Проверка существования заказа
+async def ask_complete_order(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    logger.info(f"Пользователь {update.effective_user.id} отправил ID заказа: {update.message.text}")
+    try:
+        order_id = int(update.message.text.strip())
+        telegram_id = update.effective_user.id
         user = await sync_to_async(CustomUser.objects.get)(telegram_id=telegram_id, is_staff=True)
         order = await sync_to_async(Order.objects.get)(id=order_id, status="processing", user_id=user.id)
 
         keyboard = [
-            [InlineKeyboardButton("\u2705 Завершить заказ", callback_data=f"complete_order_{order_id}")],
-            [InlineKeyboardButton("\u274C Отмена", callback_data=f"cancel_order_{order_id}")]
+            [InlineKeyboardButton("✅ Завершить заказ", callback_data=f"complete_order_{order_id}")],
+            [InlineKeyboardButton("❌ Отмена", callback_data=f"cancel_order_{order_id}")]
         ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-
         await update.message.reply_text(
             f"Вы выбрали заказ #{order.id}.\n"
-            f"Сумма: {order.total_price:.2f} руб.\n"
-            f"Адрес: {order.address or 'Не указан'}\n\n"
+            f"Сумма: {order.total_price:.2f} руб.\nАдрес: {order.address or 'Не указан'}\n\n"
             "Подтвердите завершение заказа или отмените.",
-            reply_markup=reply_markup
+            reply_markup=InlineKeyboardMarkup(keyboard)
         )
         return ConversationHandler.END
-
     except ValueError:
-        await update.message.reply_text("\u274C Пожалуйста, введите корректный **ID заказа** (число).")
+        await update.message.reply_text("Пожалуйста, введите корректный ID заказа (число).")
         return AWAIT_ORDER_ID
-
     except Order.DoesNotExist:
-        await update.message.reply_text("\u274C Заказ с таким ID не найден. Попробуйте снова.")
+        await update.message.reply_text("Заказ с таким ID не найден. Попробуйте снова.")
         return AWAIT_ORDER_ID
 
 async def complete_order_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):

@@ -47,4 +47,4 @@ def view_orders(update: Update, context: CallbackContext):
 
     except Exception as e:
         logger.error(f"Ошибка при обработке команды /view_orders для пользователя {user.username} ({user.id}): {e}", exc_info=True)
-        update.message.reply_text("Произошла ошибка при получении заказов.")
+        update.message.reply_text("Произошла ошибка 33 при получении заказов.")

@@ -1,58 +1,58 @@
-# bot/bot_runner.py
+# bot/management/commands/run_telegram_bot.py
 
 import os
-import asyncio
 import logging
+from django.core.management.base import BaseCommand
 from dotenv import load_dotenv
-import django
 
-# Инициализация Django
+import django
 load_dotenv()
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'flowerdelivery.settings')  # Укажите ваш файл настроек
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'flowerdelivery.settings')  # Путь к вашим настройкам Django
 django.setup()
 
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ConversationHandler, MessageHandler, filters
+from bot.handlers.common import start, link, get_registration_handler, my_orders
 from bot.bot_logic import (
     orders, order_details, update_order_status,
     manage_users, update_user_is_staff, update_user_status_callback,
     take_order,  # Импортируем обработчик кнопки "Взять в работу"
-    get_analytics_handler # Обработчик аналитики
+    get_analytics_handler # Добавляем обработчик аналитики
 )
-from bot.handlers.common import start, link, get_registration_handler  # Основные обработчики
-from bot.handlers.common import  my_orders, get_my_orders_handler  # Добавляем my_orders
-# from bot.handlers.analytics import get_analytics_handler  # Обработчик аналитики
+# from bot.handlers.analytics import get_analytics_handler  # Добавляем обработчик аналитики
 
 # Настройка логгера
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Определение состояний
+# Определение состояний для команд
 AWAIT_ORDER_ID = 1
-AWAIT_USER_ID = 2  # Состояние ожидания ID пользователя для управления статусом
+AWAIT_USER_ID = 2  # Состояние для команды /manage_users
 
 
-async def run_bot():
-    """
-    Асинхронная функция для запуска Telegram-бота.
-    """
-    try:
-        # Загрузка токена из файла окружения
-        token = os.getenv('TELEGRAM_BOT_TOKEN')
+class Command(BaseCommand):
+    help = "Запускает Telegram-бота"
+
+    def run(self):
+        """Метод для запуска бота в отдельном процессе."""
+        token = os.getenv("TELEGRAM_BOT_TOKEN")
+
         if not token:
-            logger.error("Ошибка: токен Telegram бота не найден. Проверьте файл .env.")
+            logger.error("Ошибка: токен Telegram бота не найден.")
             return
 
-        logger.info("Инициализация Telegram-бота...")
+        # Инициализация приложения
         application = ApplicationBuilder().token(token).build()
 
-        # Добавляем обработчики команд
+        # Добавляем хэндлеры
         logger.info("Добавление команд и обработчиков...")
 
         # Основные команды
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("link", link))
+        application.add_handler(CommandHandler("my_orders", my_orders))
+        application.add_handler(get_my_orders_handler())
 
-        # Обработчик для команды /orders
+        # Обработчик для /orders с состояниями
         orders_handler = ConversationHandler(
             entry_points=[CommandHandler("orders", orders)],
             states={
@@ -61,13 +61,12 @@ async def run_bot():
             fallbacks=[]
         )
         application.add_handler(orders_handler)
-        application.add_handler(CommandHandler("my_orders", my_orders))
-        application.add_handler(get_my_orders_handler())
+
 
         # Обработчик inline-кнопок для смены статуса заказа
         application.add_handler(CallbackQueryHandler(update_order_status, pattern=r"^status_\d+_.+$"))
 
-        # Обработчик для управления пользователями
+        # Обработчик для /manage_users с состояниями
         manage_users_handler = ConversationHandler(
             entry_points=[CommandHandler("manage_users", manage_users)],
             states={
@@ -83,33 +82,15 @@ async def run_bot():
         # Callback-обработчик для кнопки "Взять в работу"
         application.add_handler(CallbackQueryHandler(take_order, pattern=r"^take_order_\d+$"))
 
-        # Обработчик регистрации
+        # Обработчик регистрации (если есть)
         application.add_handler(get_registration_handler())
 
-        # Обработчик для аналитики
+        # Обработчик аналитики
         application.add_handler(get_analytics_handler())
 
         logger.info("Запуск Telegram-бота. Ожидание команд...")
-        await application.run_polling()
+        application.run_polling()
 
-    except Exception as e:
-        logger.error(f"Произошла ошибка при запуске бота: {e}", exc_info=True)
-
-
-def start_bot():
-    """
-    Запуск Telegram-бота с созданием нового цикла событий.
-    """
-    try:
-        logger.info("Запуск Telegram-бота...")
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(run_bot())
-    except Exception as e:
-        logger.error(f"Ошибка при запуске Telegram-бота: {e}", exc_info=True)
-    finally:
-        logger.info("Завершение работы Telegram-бота.")
-
-
-if __name__ == '__main__':
-    start_bot()
+    def handle(self, *args, **options):
+        # Стандартный метод handle вызывает run()
+        self.run()

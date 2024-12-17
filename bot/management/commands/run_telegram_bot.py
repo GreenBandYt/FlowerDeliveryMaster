@@ -11,7 +11,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'flowerdelivery.settings')  # П
 django.setup()
 
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ConversationHandler, MessageHandler, filters
-from bot.handlers.common import start, link, get_registration_handler
+from bot.handlers.common import start, link, get_registration_handler, my_orders, get_my_orders_handler
 from bot.bot_logic import (
     orders, order_details, update_order_status,
     manage_users, update_user_is_staff, update_user_status_callback,
@@ -49,6 +49,8 @@ class Command(BaseCommand):
         # Основные команды
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("link", link))
+        application.add_handler(CommandHandler("my_orders", my_orders))
+        application.add_handler(get_my_orders_handler())
 
         # Обработчик для /orders с состояниями
         orders_handler = ConversationHandler(
@@ -59,6 +61,7 @@ class Command(BaseCommand):
             fallbacks=[]
         )
         application.add_handler(orders_handler)
+
 
         # Обработчик inline-кнопок для смены статуса заказа
         application.add_handler(CallbackQueryHandler(update_order_status, pattern=r"^status_\d+_.+$"))
