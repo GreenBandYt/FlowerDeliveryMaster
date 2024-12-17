@@ -153,26 +153,33 @@ class Review(models.Model):
         return f"Review by {self.user} on {self.product.name}"
 
 
-@receiver(post_save, sender=OrderItem)
-def notify_order_items_saved(sender, instance, created, **kwargs):
+@receiver(post_save, sender=Order)
+def notify_new_order(sender, instance, created, **kwargs):
     """
-    Сигнал для отправки уведомления о новом заказе после добавления всех позиций.
+    Сигнал для отправки уведомления о новом заказе.
+    Уведомление отправляется только один раз, после сохранения всех позиций.
     """
-    if created:
-        logger.info(f"Добавлена позиция {instance.product.name} в заказ #{instance.order.id}")
+    if created:  # Только при создании заказа
+        logger.info(f"Сигнал сработал: создан заказ #{instance.id}")
 
-        # Проверка, что все позиции заказа добавлены
-        def send_notification():
-            order = instance.order
-            total_items = order.items.count()
-            if total_items > 0:
-                logger.info(f"Все позиции добавлены в заказ #{order.id}. Отправляем уведомление.")
-                try:
-                    bot_logic = importlib.import_module('bot.bot_logic')
-                    send_new_order_notification = getattr(bot_logic, 'send_new_order_notification')
-                    send_new_order_notification(order)
-                except Exception as e:
-                    logger.error(f"Ошибка при отправке уведомления: {e}", exc_info=True)
+        # Проверка завершения транзакции
+        transaction.on_commit(lambda: send_notification(instance))
 
-        transaction.on_commit(send_notification)
 
+def send_notification(order):
+    try:
+        # Динамический импорт функции для отправки уведомлений
+        bot_logic = importlib.import_module('bot.bot_logic')
+        send_new_order_notification = getattr(bot_logic, 'send_new_order_notification')
+
+        # Проверяем, есть ли элементы в заказе
+        order_items = order.items.all()
+        if not order_items.exists():
+            logger.warning(f"Заказ #{order.id} не содержит позиций. Уведомление не отправлено.")
+            return
+
+        # Отправка уведомления
+        send_new_order_notification(order)
+        logger.info(f"Уведомление успешно отправлено для заказа #{order.id}.")
+    except Exception as e:
+        logger.error(f"Ошибка при отправке уведомления о заказе #{order.id}: {e}", exc_info=True)

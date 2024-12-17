@@ -373,17 +373,28 @@ async def update_user_status_callback(update: Update, context: ContextTypes.DEFA
 
 
 async def async_send_new_order_notification(order):
-    """
-    Асинхронная функция для отправки уведомлений о новом заказе сотрудникам.
-    """
     try:
         # Получаем сотрудников с telegram_id
         staff_users = await sync_to_async(
             lambda: list(CustomUser.objects.filter(is_staff=True, telegram_id__isnull=False))
         )()
 
-        # Асинхронно получаем элементы заказа
-        order_items = await sync_to_async(lambda: list(order.items.select_related("product").all()))()
+        # Проверка связи с элементами заказа
+        logger.info(f"Fetching items for Order ID: {order.id}")
+        order_items = await sync_to_async(lambda: list(order.items.prefetch_related("product").all()))()
+
+        logger.info(f"Order Items Count: {len(order_items)}")
+        for item in order_items:
+            logger.info(f"Item: Product={item.product.name}, Quantity={item.quantity}, Price={item.price}")
+
+        # Проверка order.user
+        logger.info(f"Order User: {order.user.username}, Phone: {order.user.phone_number}")
+
+        # Проверка самого заказа
+        logger.info(f"Order Total Price: {order.total_price}, Address: {order.address}")
+
+        # Получаем номер телефона клиента
+        phone_number = order.user.phone_number if order.user.phone_number else "Не указан"
 
         # Формируем сообщение
         order_message = (
@@ -394,7 +405,7 @@ async def async_send_new_order_notification(order):
             )
             + f"\n💰 Общая сумма: {order.total_price:.2f} руб.\n"
             f"📍 Адрес доставки: {order.address or 'Не указан'}\n"
-            f"📞 Телефон клиента: {order.notes or 'Не указан'}"
+            f"📞 Телефон клиента: {phone_number}"
         )
 
         # Кнопка "Взять в работу"
@@ -406,9 +417,12 @@ async def async_send_new_order_notification(order):
         if not token:
             raise ValueError("Токен Telegram бота отсутствует. Проверьте файл .env.")
 
-        # Отправляем сообщение сотрудникам
+        # Инициализация и отправка сообщений
         app = Application.builder().token(token).build()
+        await app.initialize()  # Инициализация Application
+
         for staff in staff_users:
+            logger.info(f"Sending message to {staff.username} ({staff.telegram_id})")
             await app.bot.send_message(
                 chat_id=staff.telegram_id,
                 text=order_message,
@@ -416,8 +430,13 @@ async def async_send_new_order_notification(order):
                 reply_markup=reply_markup
             )
 
+        await app.shutdown()  # Завершаем работу Application
+        logger.info("Notifications successfully sent.")
+
     except Exception as e:
         logger.error(f"Ошибка при отправке уведомлений: {e}", exc_info=True)
+
+
 def send_new_order_notification(order):
     """
     Синхронная обёртка для вызова асинхронной функции отправки уведомлений.
