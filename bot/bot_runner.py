@@ -16,11 +16,13 @@ from bot.bot_logic import (
     orders, order_details, update_order_status,
     manage_users, update_user_is_staff, update_user_status_callback,
     take_order,  # Импортируем обработчик кнопки "Взять в работу"
-    get_analytics_handler # Обработчик аналитики
+    get_analytics_handler  # Обработчик аналитики
 )
-from bot.handlers.common import start, link, get_registration_handler  # Основные обработчики
-from bot.handlers.common import  my_orders, get_my_orders_handler  # Добавляем my_orders
-# from bot.handlers.analytics import get_analytics_handler  # Обработчик аналитики
+from bot.handlers.common import start, link, get_registration_handler, my_orders, get_my_orders_handler
+from bot.handlers.customer import (
+    view_orders, view_catalog, add_to_cart, remove_from_cart,
+    view_cart, checkout, confirm_checkout, cancel_checkout
+)
 
 # Настройка логгера
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -62,6 +64,12 @@ async def run_bot():
         )
         application.add_handler(orders_handler)
         application.add_handler(CommandHandler("my_orders", my_orders))
+        application.add_handler(CommandHandler("view_orders", view_orders))
+        application.add_handler(CommandHandler("view_catalog", view_catalog))
+        application.add_handler(CommandHandler("add_to_cart", add_to_cart))
+        application.add_handler(CommandHandler("view_cart", view_cart))
+        application.add_handler(CommandHandler("checkout", checkout))
+
         application.add_handler(get_my_orders_handler())
 
         # Обработчик inline-кнопок для смены статуса заказа
@@ -86,8 +94,15 @@ async def run_bot():
         # Обработчик регистрации
         application.add_handler(get_registration_handler())
 
-        # Обработчик для аналитики
+        # Обработчик аналитики
         application.add_handler(get_analytics_handler())
+
+        # Callback обработчики для корзины
+        application.add_handler(CallbackQueryHandler(add_to_cart, pattern=r"^add_to_cart_\d+$"))
+        application.add_handler(CallbackQueryHandler(remove_from_cart, pattern=r"^remove_from_cart_\d+$"))
+        application.add_handler(CallbackQueryHandler(checkout, pattern="^checkout$"))
+        application.add_handler(CallbackQueryHandler(confirm_checkout, pattern="^confirm_checkout$"))
+        application.add_handler(CallbackQueryHandler(cancel_checkout, pattern="^cancel_checkout$"))
 
         logger.info("Запуск Telegram-бота. Ожидание команд...")
         await application.run_polling()

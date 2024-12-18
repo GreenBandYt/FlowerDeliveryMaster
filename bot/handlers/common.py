@@ -33,7 +33,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Доступные команды:\n"
                 "/analytics - Просмотр аналитики\n"
                 "/manage_users - Управление пользователями\n"
-                "/orders - Управление заказами"
+                "/orders - Управление заказами\n"
+
             )
         elif user.is_staff:
             await update.message.reply_text(
@@ -47,7 +48,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"Здравствуйте, {user.username} (Клиент)!\n"
                 "Доступные команды:\n"
                 "/view_orders - Просмотр ваших заказов\n"
-                "/new_order - Создание нового заказа"
+                "/view_cart - Просмотр корзины\n"
+                "/view_catalog - Просмотр каталога товаров"
+
             )
 
     except CustomUser.DoesNotExist:
