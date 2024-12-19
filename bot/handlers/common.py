@@ -1,5 +1,5 @@
 from prettytable import PrettyTable
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from telegram.ext import (ContextTypes, CommandHandler, ConversationHandler,
                           MessageHandler, filters)
 from users.models import CustomUser
@@ -20,7 +20,8 @@ AWAIT_ORDER_ID = 1
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Обработчик команды /start. Приветствует пользователя в зависимости от его роли.
+    Обработчик команды /start. Приветствует пользователя в зависимости от его роли
+    и добавляет меню с кнопками-эмодзи.
     """
     telegram_id = update.effective_user.id
 
@@ -34,7 +35,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "/analytics - Просмотр аналитики\n"
                 "/manage_users - Управление пользователями\n"
                 "/orders - Управление заказами\n"
-
             )
         elif user.is_staff:
             await update.message.reply_text(
@@ -44,13 +44,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "/update_status - Обновление статуса заказов"
             )
         else:
+            # Для клиента
+            keyboard = ReplyKeyboardMarkup(
+                [["📦", "🛒", "🛍️", "ℹ️"]],
+                resize_keyboard=True,
+                one_time_keyboard=False
+            )
             await update.message.reply_text(
                 f"Здравствуйте, {user.username} (Клиент)!\n"
                 "Доступные команды:\n"
-                "/view_orders - Просмотр ваших заказов\n"
-                "/view_cart - Просмотр корзины\n"
-                "/view_catalog - Просмотр каталога товаров"
-
+                "📦 Просмотр заказов\n"
+                "🛒 Просмотр корзины\n"
+                "🛍️ Просмотр каталога\n"
+                "ℹ️ Помощь",
+                reply_markup=keyboard
             )
 
     except CustomUser.DoesNotExist:
@@ -58,6 +65,53 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Здравствуйте! Ваш аккаунт не привязан.\n"
             "Введите /link <username>, чтобы привязать ваш Telegram аккаунт к системе."
         )
+
+async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Обработчик команды /help. Показывает доступные команды и клавиатуру с кнопками.
+    """
+    telegram_id = update.effective_user.id
+
+    try:
+        user = await sync_to_async(CustomUser.objects.get)(telegram_id=telegram_id)
+
+        if user.is_superuser:
+            await update.message.reply_text(
+                f"Вы администратор, {user.username}.\n"
+                "Доступные команды:\n"
+                "/analytics - Просмотр аналитики\n"
+                "/manage_users - Управление пользователями\n"
+                "/orders - Управление заказами\n"
+            )
+        elif user.is_staff:
+            await update.message.reply_text(
+                f"Вы сотрудник, {user.username}.\n"
+                "Доступные команды:\n"
+                "/my_orders - Текущие заказы\n"
+                "/update_status - Обновление статуса заказов"
+            )
+        else:
+            # Для клиента
+            keyboard = ReplyKeyboardMarkup(
+                [["📦", "🛒", "🛍️", "ℹ️"]],
+                resize_keyboard=True,
+                one_time_keyboard=False
+            )
+            await update.message.reply_text(
+                f"Вы клиент, {user.username}.\n"
+                "Доступные команды:\n"
+                "📦 Просмотр заказов\n"
+                "🛒 Просмотр корзины\n"
+                "🛍️ Просмотр каталога\n"
+                "ℹ️ Помощь",
+                reply_markup=keyboard
+            )
+
+    except CustomUser.DoesNotExist:
+        await update.message.reply_text(
+            "Ваш аккаунт не найден. Убедитесь, что вы зарегистрированы в системе."
+        )
+
 
 async def link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """

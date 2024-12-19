@@ -97,6 +97,7 @@ class Command(BaseCommand):
         # Callback обработчики для управления корзиной
         application.add_handler(CallbackQueryHandler(add_to_cart, pattern=r"^add_to_cart_\d+$"))
         application.add_handler(CallbackQueryHandler(remove_from_cart, pattern=r"^remove_from_cart_\d+$"))
+        application.add_handler(CallbackQueryHandler(checkout, pattern="^checkout$"))
         application.add_handler(CallbackQueryHandler(confirm_checkout, pattern="^confirm_checkout$"))
         application.add_handler(CallbackQueryHandler(cancel_checkout, pattern="^cancel_checkout$"))
 

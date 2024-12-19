@@ -18,7 +18,7 @@ from bot.bot_logic import (
     take_order,  # Импортируем обработчик кнопки "Взять в работу"
     get_analytics_handler  # Обработчик аналитики
 )
-from bot.handlers.common import start, link, get_registration_handler, my_orders, get_my_orders_handler
+from bot.handlers.common import start, link, get_registration_handler, my_orders, get_my_orders_handler, help
 from bot.handlers.customer import (
     view_orders, view_catalog, add_to_cart, remove_from_cart,
     view_cart, checkout, confirm_checkout, cancel_checkout
@@ -52,6 +52,7 @@ async def run_bot():
 
         # Основные команды
         application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("help", help))
         application.add_handler(CommandHandler("link", link))
 
         # Обработчик для команды /orders
@@ -103,6 +104,27 @@ async def run_bot():
         application.add_handler(CallbackQueryHandler(checkout, pattern="^checkout$"))
         application.add_handler(CallbackQueryHandler(confirm_checkout, pattern="^confirm_checkout$"))
         application.add_handler(CallbackQueryHandler(cancel_checkout, pattern="^cancel_checkout$"))
+
+        # Обработчик текстовых сообщений для кнопок-эмодзи
+        async def handle_menu_buttons(update, context):
+            """
+            Обрабатывает текстовые сообщения, которые соответствуют эмодзи на кнопках.
+            """
+            text = update.message.text.strip()
+
+            if text == "📦":  # Просмотр заказов
+                await view_orders(update, context)
+            elif text == "🛒":  # Просмотр корзины
+                await view_cart(update, context)
+            elif text == "🛍️":  # Просмотр каталога
+                await view_catalog(update, context)
+            elif text == "ℹ️":  # Помощь
+                await help(update, context)
+            else:
+                await update.message.reply_text("Я не понимаю эту команду. Попробуйте ещё раз.")
+
+        # Добавляем обработчик текстовых сообщений
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu_buttons))
 
         logger.info("Запуск Telegram-бота. Ожидание команд...")
         await application.run_polling()

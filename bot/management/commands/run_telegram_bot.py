@@ -11,7 +11,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'flowerdelivery.settings')  # П
 django.setup()
 
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ConversationHandler, MessageHandler, filters
-from bot.handlers.common import start, link, get_registration_handler, my_orders, get_my_orders_handler
+from bot.handlers.common import start, link, get_registration_handler, my_orders, get_my_orders_handler, help
 from bot.handlers.customer import view_orders, view_catalog, add_to_cart, remove_from_cart, view_cart, checkout, confirm_checkout, cancel_checkout
 
 from bot.bot_logic import (
@@ -49,6 +49,7 @@ class Command(BaseCommand):
 
         # Основные команды
         application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("help", help))
         application.add_handler(CommandHandler("link", link))
         application.add_handler(CommandHandler("my_orders", my_orders))
         application.add_handler(CommandHandler("view_orders", view_orders))
@@ -100,6 +101,27 @@ class Command(BaseCommand):
         application.add_handler(CallbackQueryHandler(checkout, pattern="^checkout$"))
         application.add_handler(CallbackQueryHandler(confirm_checkout, pattern="^confirm_checkout$"))
         application.add_handler(CallbackQueryHandler(cancel_checkout, pattern="^cancel_checkout$"))
+
+        # Обработчик текстовых сообщений для кнопок-эмодзи
+        async def handle_menu_buttons(update, context):
+            """
+            Обрабатывает текстовые сообщения, которые соответствуют эмодзи на кнопках.
+            """
+            text = update.message.text.strip()
+
+            if text == "📦":  # Просмотр заказов
+                await view_orders(update, context)
+            elif text == "🛒":  # Просмотр корзины
+                await view_cart(update, context)
+            elif text == "🛍️":  # Просмотр каталога
+                await view_catalog(update, context)
+            elif text == "ℹ️":  # Помощь
+                await help(update, context)
+            else:
+                await update.message.reply_text("Я не понимаю эту команду. Попробуйте ещё раз.")
+
+        # Добавляем обработчик текстовых сообщений
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu_buttons))
 
         logger.info("Запуск Telegram-бота. Ожидание команд...")
         application.run_polling()
