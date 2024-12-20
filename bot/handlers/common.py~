@@ -3,9 +3,9 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKe
 from telegram.ext import (ContextTypes, CommandHandler, ConversationHandler,
                           MessageHandler, filters)
 from users.models import CustomUser
+from bot.keyboards.customer_keyboards import customer_keyboard
 from asgiref.sync import sync_to_async
 from django.db.utils import IntegrityError
-from catalog.models import Order
 import re
 import logging
 
@@ -15,13 +15,12 @@ logging.basicConfig(level=logging.INFO)
 
 # Состояния для регистрации
 USERNAME, PASSWORD, PHONE, ADDRESS = range(4)
-AWAIT_ORDER_ID = 1
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Обработчик команды /start. Приветствует пользователя в зависимости от его роли
-    и добавляет меню с кнопками-эмодзи.
+    и добавляет меню с кнопками.
     """
     telegram_id = update.effective_user.id
 
@@ -30,42 +29,101 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if user.is_superuser:
             await update.message.reply_text(
-                f"Здравствуйте, {user.username} (АдминистрАтор)!\n"
-                "Доступные команды:\n"
-                "/analytics - Просмотр аналитики\n"
-                "/manage_users - Управление пользователями\n"
-                "/orders - Управление заказами\n"
+                f"👑 Здравствуйте, {user.username} (Администратор)!\n"
+                "💻 Доступные команды:\n"
+                "📊 /analytics - Просмотр аналитики\n"
+                "👥 /manage_users - Управление пользователями\n"
+                "📦 /orders - Управление заказами\n"
+                "ℹ️ /help - Помощь"
             )
         elif user.is_staff:
             await update.message.reply_text(
-                f"Здравствуйте, {user.username} (СотруДник)!\n"
-                "Доступные команды:\n"
-                "/my_orders - Текущие заказы\n"
-                "/update_status - Обновление статуса заказов"
+                f"🛠️ Здравствуйте, {user.username} (Сотрудник)!\n"
+                "🔧 Доступные команды:\n"
+                "📦 /my_orders - Текущие заказы\n"
+                "🔄 /update_status - Обновление статуса заказов\n"
+                "ℹ️ /show_help- Помощь"
             )
         else:
             # Для клиента
             keyboard = ReplyKeyboardMarkup(
-                [["📦", "🛒", "🛍️", "ℹ️"]],
+                [["📦 Мои заказы", "🛒 Корзина", "🛍️ Каталог", "ℹ️ Помощь"]],
                 resize_keyboard=True,
                 one_time_keyboard=False
             )
             await update.message.reply_text(
-                f"Здравствуйте, {user.username} (Клиент)!\n"
-                "Доступные команды:\n"
-                "📦 Просмотр заказов\n"
-                "🛒 Просмотр корзины\n"
-                "🛍️ Просмотр каталога\n"
-                "ℹ️ Помощь",
-                reply_markup=keyboard
+                f"🌸 Здравствуйте, {user.username} (Клиент)!\n"
+                "🎉 Доступные команды:\n"
+                "📦 /view_orders - Мои заказы\n"
+                "🛒 /view_cart - Корзина\n"
+                "🛍️ /view_catalog - Каталог\n"
+                "ℹ️ /show_help- Помощь",
+                reply_markup=customer_keyboard
             )
 
     except CustomUser.DoesNotExist:
+        # Добавляем кнопки для первого входа
+        keyboard = ReplyKeyboardMarkup(
+            [["🔗 Привязать аккаунт", "📝 Зарегистрироваться"], ["ℹ️ Помощь"]],
+            resize_keyboard=True,
+            one_time_keyboard=True
+        )
         await update.message.reply_text(
-            "Здравствуйте! Ваш аккаунт не привязан.\n"
-            "Введите /link <username>, чтобы привязать ваш Telegram аккаунт к системе."
+            "👋 Добро пожаловать в систему!\n"
+            "Ваш аккаунт не привязан.\n\n"
+            "🔗 Используйте команду /link для привязки существующего аккаунта.\n"
+            "📝 Или выберите /register чтобы создать новый аккаунт.\n"
+            "ℹ️ Воспользуйтесь командой /show_helpдля получения помощи.",
+            reply_markup=keyboard
         )
 
+async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Обработчик команды /help. Показывает доступные команды в зависимости от роли пользователя.
+    """
+    telegram_id = update.effective_user.id
+
+    try:
+        user = await sync_to_async(CustomUser.objects.get)(telegram_id=telegram_id)
+
+        if user.is_superuser:
+            await update.message.reply_text(
+                f"👑 Помощь для администратора, {user.username}:\n"
+                "📊 /analytics - Просмотр аналитики\n"
+                "👥 /manage_users - Управление пользователями\n"
+                "📦 /orders - Управление заказами\n"
+                "ℹ️ /show_help- Помощь"
+            )
+        elif user.is_staff:
+            await update.message.reply_text(
+                f"🛠️ Помощь для сотрудника, {user.username}:\n"
+                "📦 /my_orders - Текущие заказы\n"
+                "🔄 /update_status - Обновление статуса заказов\n"
+                "ℹ️ /show_help- Помощь"
+            )
+        else:
+            keyboard = ReplyKeyboardMarkup(
+                [["📦 Мои заказы", "🛒 Корзина", "🛍️ Каталог", "ℹ️ Помощь"]],
+                resize_keyboard=True,
+                one_time_keyboard=False
+            )
+            await update.message.reply_text(
+                f"🌸 Здравствуйте, {user.username} (Клиент)!\n"
+                "🎉 Доступные команды:\n"
+                "📦 /view_orders - Мои заказы\n"
+                "🛒 /view_cart - Корзина\n"
+                "🛍️ /view_catalog - Каталог\n"
+                "ℹ️ /show_help- Помощь",
+                reply_markup=keyboard
+            )
+    except CustomUser.DoesNotExist:
+        await update.message.reply_text(
+            "🔗 Ваш аккаунт не привязан к системе.\n"
+            "Доступные команды:\n"
+            "📦 /start - Начать взаимодействие\n"
+            "🔗 /link <ваш_логин> - Привязать Telegram аккаунт\n"
+            "ℹ️ /show_help- Помощь"
+        )
 
 
 async def link(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -73,18 +131,22 @@ async def link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     Привязывает Telegram аккаунт пользователя к логину в системе.
     """
     if len(context.args) != 1:
-        await update.message.reply_text("Пожалуйста, укажите ваш логин. Пример: /link username")
+        await update.message.reply_text("⚠️ Укажите логин. Пример: /link your_username")
         return
 
     username = context.args[0]
     telegram_id = update.effective_user.id
+
+    if not re.match(r"^\w{3,}$", username):
+        await update.message.reply_text("❌ Логин должен состоять минимум из 3 символов. Попробуйте снова.")
+        return
 
     try:
         user = await sync_to_async(CustomUser.objects.get)(username=username)
 
         if user.telegram_id and user.telegram_id != telegram_id:
             await update.message.reply_text(
-                "Этот логин уже привязан к другому Telegram аккаунту."
+                "⚠️ Этот логин уже привязан к другому Telegram аккаунту."
             )
             return
 
@@ -92,96 +154,19 @@ async def link(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await sync_to_async(user.save)()
 
         await update.message.reply_text(
-            f"Ваш Telegram аккаунт успешно привязан к логину {username}."
+            f"✅ Telegram успешно привязан к логину {username}."
         )
-
     except CustomUser.DoesNotExist:
-        await update.message.reply_text("Пользователь с таким логином не найден.")
+        await update.message.reply_text("❌ Пользователь с таким логином не найден.")
 
-async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Начало процесса регистрации.
-    """
-    await update.message.reply_text(
-        "Введите желаемое имя пользователя:",
-        # reply_markup=ReplyKeyboardMarkup([["Отмена"]], one_time_keyboard=True),
-    )
-    return USERNAME
-
-async def get_username(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Получение имени пользователя для регистрации.
-    """
-    username = update.message.text
-
-    if username.lower() == "отмена":
-        await update.message.reply_text("Регистрация отменена.")
-        return ConversationHandler.END
-
-    context.user_data['username'] = username
-    await update.message.reply_text("Введите пароль:")
-    return PASSWORD
-
-async def get_password(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Получение пароля для регистрации.
-    """
-    password = update.message.text
-    context.user_data['password'] = password
-    await update.message.reply_text("Введите ваш номер телефона:")
-    return PHONE
-
-async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Получение телефона для регистрации.
-    """
-    phone = update.message.text
-    context.user_data['phone'] = phone
-
-    # Регулярное выражение для проверки формата номера телефона
-    phone_pattern = r'^\+7\(\d{3}\)\d{3}-\d{2}-\d{2}$'
-
-    if not re.match(phone_pattern, phone):
-        await update.message.reply_text(
-            "Ошибка: номер телефона должен быть в формате +7(XXX)XXX-XX-XX."
-        )
-        return PHONE
-
-    await update.message.reply_text("Введите ваш адрес:")
-    return ADDRESS
-
-async def get_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Получение адреса и завершение регистрации.
-    """
-    address = update.message.text
-    user_data = context.user_data
-
-    try:
-        user = await sync_to_async(CustomUser.objects.create_user)(
-            username=user_data['username'],
-            password=user_data['password'],
-            telegram_id=update.effective_user.id,
-            phone_number=user_data['phone'],
-            address=address,
-        )
-        await sync_to_async(user.save)()
-        await update.message.reply_text("Регистрация успешна! Теперь вы можете использовать бота.")
-    except IntegrityError:
-        await update.message.reply_text(
-            "Ошибка: такое имя пользователя уже существует. Попробуйте снова."
-        )
-    except Exception as e:
-        await update.message.reply_text(f"Произошла ошибка: {e}")
-
-    return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Отмена регистрации.
+    Отмена текущего действия.
     """
-    await update.message.reply_text("Регистрация отменена.")
+    await update.message.reply_text("🚫 Действие отменено.")
     return ConversationHandler.END
+
 
 def get_registration_handler():
     """
@@ -199,100 +184,79 @@ def get_registration_handler():
     )
 
 
-async def my_orders(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    telegram_id = update.effective_user.id
-    try:
-        user = await sync_to_async(CustomUser.objects.get)(telegram_id=telegram_id, is_staff=True)
-        orders = await sync_to_async(lambda: list(Order.objects.filter(status="processing", user_id=user.id)))()
-
-        if not orders:
-            await update.message.reply_text("\U0000274C У вас нет активных заказов в работе.")
-            return ConversationHandler.END
-
-        # Создание таблицы заказов
-        table = PrettyTable(["#", "ID Заказа", "Сумма", "Адрес"])
-        table.align["Адрес"] = "l"
-        for idx, order in enumerate(orders, start=1):
-            table.add_row([idx, order.id, f"{order.total_price:.2f} руб.", order.address or "Не указан"])
-
-        await update.message.reply_text(
-            f"Ваши текущие заказы в работе:\n<pre>{table}</pre>",
-            parse_mode="HTML"
-        )
-        await update.message.reply_text(
-            "Введите **ID заказа**, чтобы завершить его, или отправьте /cancel.",
-            parse_mode="Markdown"
-        )
-        return AWAIT_ORDER_ID
-
-    except CustomUser.DoesNotExist:
-        await update.message.reply_text("\U0000274C У вас нет прав для выполнения этой команды.")
-        return ConversationHandler.END
-
-async def ask_complete_order(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    try:
-        order_id = int(update.message.text.strip())  # Проверка корректности ввода
-        telegram_id = update.effective_user.id
-
-        # Проверка существования заказа
-        user = await sync_to_async(CustomUser.objects.get)(telegram_id=telegram_id, is_staff=True)
-        order = await sync_to_async(Order.objects.get)(id=order_id, status="processing", user_id=user.id)
-
-        keyboard = [
-            [InlineKeyboardButton("\u2705 Завершить заказ", callback_data=f"complete_order_{order_id}")],
-            [InlineKeyboardButton("\u274C Отмена", callback_data=f"cancel_order_{order_id}")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-
-        await update.message.reply_text(
-            f"Вы выбрали заказ #{order.id}.\n"
-            f"Сумма: {order.total_price:.2f} руб.\n"
-            f"Адрес: {order.address or 'Не указан'}\n\n"
-            "Подтвердите завершение заказа или отмените.",
-            reply_markup=reply_markup
-        )
-        return ConversationHandler.END
-
-    except ValueError:
-        await update.message.reply_text("\u274C Пожалуйста, введите корректный **ID заказа** (число).")
-        return AWAIT_ORDER_ID
-
-    except Order.DoesNotExist:
-        await update.message.reply_text("\u274C Заказ с таким ID не найден. Попробуйте снова.")
-        return AWAIT_ORDER_ID
-
-async def complete_order_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    callback_data = query.data
-
-    if callback_data.startswith("complete_order_"):
-        order_id = callback_data.replace("complete_order_", "")
-        try:
-            order = await sync_to_async(Order.objects.get)(id=order_id, status="processing")
-            order.status = "completed"
-            await sync_to_async(order.save)()
-            await query.edit_message_text(f"\u2705 Заказ #{order.id} успешно завершён.")
-        except Order.DoesNotExist:
-            await query.edit_message_text("\u274C Заказ не найден или уже завершён.")
-        except Exception as e:
-            logger.error(f"Ошибка при завершении заказа: {e}", exc_info=True)
-            await query.edit_message_text("\u26A0 Произошла ошибка при завершении заказа.")
-
-    elif callback_data.startswith("cancel_order_"):
-        await query.edit_message_text("\u274C Действие отменено.")
-
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("\U0000274C Действие отменено.")
-    return ConversationHandler.END
-
-def get_my_orders_handler():
-    return ConversationHandler(
-        entry_points=[CommandHandler("my_orders", my_orders)],
-        states={
-            AWAIT_ORDER_ID: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, ask_complete_order)
-            ],
-        },
-        fallbacks=[CommandHandler("cancel", cancel)]
+async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Начало процесса регистрации.
+    """
+    await update.message.reply_text(
+        "📝 Введите желаемое имя пользователя:"
     )
+    return USERNAME
+
+
+async def get_username(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Получение имени пользователя для регистрации.
+    """
+    username = update.message.text
+
+    if username.lower() == "отмена":
+        await update.message.reply_text("🚫 Регистрация отменена.")
+        return ConversationHandler.END
+
+    context.user_data['username'] = username
+    await update.message.reply_text("🔒 Введите пароль:")
+    return PASSWORD
+
+
+async def get_password(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Получение пароля для регистрации.
+    """
+    password = update.message.text
+    context.user_data['password'] = password
+    await update.message.reply_text("📞 Введите ваш номер телефона:")
+    return PHONE
+
+
+async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Получение телефона для регистрации.
+    """
+    phone = update.message.text
+    context.user_data['phone'] = phone
+
+    phone_pattern = r'^\+7\(\d{3}\)\d{3}-\d{2}-\d{2}$'
+    if not re.match(phone_pattern, phone):
+        await update.message.reply_text(
+            "❌ Номер телефона должен быть в формате +7(XXX)XXX-XX-XX."
+        )
+        return PHONE
+
+    await update.message.reply_text("🏠 Введите ваш адрес:")
+    return ADDRESS
+
+
+async def get_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Получение адреса и завершение регистрации.
+    """
+    address = update.message.text
+    user_data = context.user_data
+
+    try:
+        user = await sync_to_async(CustomUser.objects.create_user)(
+            username=user_data['username'],
+            password=user_data['password'],
+            telegram_id=update.effective_user.id,
+            phone_number=user_data['phone'],
+            address=address,
+        )
+        await sync_to_async(user.save)()
+        await update.message.reply_text("✅ Регистрация успешна!")
+    except IntegrityError:
+        await update.message.reply_text("❌ Такое имя пользователя уже существует.")
+    except Exception as e:
+        await update.message.reply_text(f"⚠️ Произошла ошибка: {e}")
+
+    return ConversationHandler.END

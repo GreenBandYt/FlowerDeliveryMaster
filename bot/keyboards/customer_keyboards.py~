@@ -1,5 +1,3 @@
-#  bot/keyboards/customer_keyboards.py
-
 from telegram import ReplyKeyboardMarkup
 
 customer_keyboard = ReplyKeyboardMarkup(

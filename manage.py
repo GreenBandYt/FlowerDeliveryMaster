@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# manage.py
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
@@ -10,7 +11,7 @@ import django
 
 # Настройка логирования
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,  # Уровень логирования уменьшен до INFO
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[logging.StreamHandler(sys.stdout)],
 )

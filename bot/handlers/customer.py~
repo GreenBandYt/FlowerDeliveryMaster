@@ -145,8 +145,7 @@ async def increase_quantity(update: Update, context: CallbackContext):
         await query.message.reply_text(
             f"🔼 Количество товара '{cart_item.product.name}' увеличено до {cart_item.quantity}."
         )
-        # Обновляем корзину
-        await view_cart(update, context)
+
 
 
     except CartItem.DoesNotExist:
