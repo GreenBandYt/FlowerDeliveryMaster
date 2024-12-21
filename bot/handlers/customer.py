@@ -1,5 +1,8 @@
 # bot/handlers/customer.py
 
+import os
+from PIL import Image
+from telegram.constants import ParseMode  # Для HTML-разметки сообщений
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext
 from asgiref.sync import sync_to_async
@@ -14,6 +17,7 @@ from bot.handlers.common import show_help
 logger = logging.getLogger(__name__)
 
 
+# ======= Просмотр каталога товаров =======
 # ======= Просмотр каталога товаров =======
 async def view_catalog(update: Update, context: CallbackContext):
     """
@@ -37,18 +41,53 @@ async def view_catalog(update: Update, context: CallbackContext):
                     f"\U0001F4B0 Цена: {product.price:.2f} руб.\n"
                     f"\u2139\ufe0f {product.description}")
 
-            # Инлайн-кнопка для добавления в корзину
-            keyboard = [[InlineKeyboardButton(
-                "Добавить в корзину",
-                callback_data=f"add_to_cart_{product.id}"
-            )]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
+            # Путь к файлу изображения
+            image_path = os.path.join("media", str(product.image))
 
-            await update.message.reply_text(text, reply_markup=reply_markup)
+            # Проверяем, существует ли файл изображения
+            if os.path.exists(image_path):
+                # Ограничиваем размер изображения
+                resized_image_path = resize_image(image_path)
+
+                # Формируем инлайн-кнопку для добавления в корзину
+                keyboard = [[InlineKeyboardButton(
+                    "Добавить в корзину",
+                    callback_data=f"add_to_cart_{product.id}"
+                )]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
+                # Отправляем фото, текст и кнопку
+                await context.bot.send_photo(
+                    chat_id=update.message.chat_id,
+                    photo=open(resized_image_path, "rb"),
+                    caption=text,
+                    parse_mode=ParseMode.HTML,
+                    reply_markup=reply_markup
+                )
+
+                # Удаляем временный уменьшенный файл
+                if resized_image_path != image_path:
+                    os.remove(resized_image_path)
+            else:
+                logger.warning(f"Файл изображения {image_path} не найден.")
+                await update.message.reply_text(f"{text}\n\nИзображение недоступно.")
 
     except Exception as e:
         logger.exception(f"Ошибка при отображении каталога для пользователя {user.username} ({user.id}): {e}")
         await update.message.reply_text("Произошла ошибка при загрузке каталога.")
+
+
+# Функция для уменьшения размера изображения
+def resize_image(image_path, max_size=(512, 512)):
+    try:
+        with Image.open(image_path) as img:
+            img.thumbnail(max_size)  # Уменьшение изображения до максимального размера
+            new_path = f"{image_path}_resized.jpg"
+            img.save(new_path, "JPEG")
+            return new_path
+    except Exception as e:
+        logger.error(f"Ошибка при изменении размера изображения {image_path}: {e}")
+        return image_path
 
 # ======= Обработка добавления товара в корзину =======
 async def add_to_cart(update: Update, context: CallbackContext):
