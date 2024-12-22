@@ -16,7 +16,6 @@ logging.basicConfig(level=logging.INFO)
 # Состояния для регистрации
 USERNAME, PASSWORD, PHONE, ADDRESS = range(4)
 
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Обработчик команды /start. Приветствует пользователя в зависимости от его роли
@@ -28,26 +27,38 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = await sync_to_async(CustomUser.objects.get)(telegram_id=telegram_id)
 
         if user.is_superuser:
+            admin_keyboard = ReplyKeyboardMarkup(
+                [["📊 Аналитика", "👥 Пользователи", "📦 Заказы", "ℹ️ Помощь"]],
+                resize_keyboard=True,
+                one_time_keyboard=False
+            )
             await update.message.reply_text(
                 f"👑 Здравствуйте, {user.username} (Администратор)!\n"
                 "💻 Доступные команды:\n"
                 "📊 /analytics - Просмотр аналитики\n"
                 "👥 /manage_users - Управление пользователями\n"
                 "📦 /orders - Управление заказами\n"
-                "ℹ️ /help - Помощь"
+                "ℹ️ /admin_help - Помощь",
+                reply_markup=admin_keyboard
             )
         elif user.is_staff:
+            staff_keyboard = ReplyKeyboardMarkup(
+                [["📦 Текущие заказы", "🔄 Обновить статус", "ℹ️ Помощь посмотреть"]],
+                resize_keyboard=True,
+                one_time_keyboard=False
+            )
             await update.message.reply_text(
                 f"🛠️ Здравствуйте, {user.username} (Сотрудник)!\n"
                 "🔧 Доступные команды:\n"
                 "📦 /my_orders - Текущие заказы\n"
                 "🔄 /update_status - Обновление статуса заказов\n"
-                "ℹ️ /show_help- Помощь"
+                "ℹ️ /look_help - Помощь посмотреть",
+                reply_markup=staff_keyboard
             )
         else:
             # Для клиента
-            keyboard = ReplyKeyboardMarkup(
-                [["📦 Мои заказы", "🛒 Корзина", "🛍️ Каталог", "ℹ️ Помощь"]],
+            customer_keyboard = ReplyKeyboardMarkup(
+                [["📦 Мои заказы", "🛒 Корзина", "🛍️ Каталог", "ℹ️ Помощь показать"]],
                 resize_keyboard=True,
                 one_time_keyboard=False
             )
@@ -57,7 +68,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "📦 /view_orders - Мои заказы\n"
                 "🛒 /view_cart - Корзина\n"
                 "🛍️ /view_catalog - Каталог\n"
-                "ℹ️ /show_help- Помощь",
+                "ℹ️ /show_help - Помощь показать",
                 reply_markup=customer_keyboard
             )
 
@@ -76,55 +87,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "ℹ️ Воспользуйтесь командой /show_help для получения помощи.",
             reply_markup=keyboard
         )
-
-async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Обработчик команды /show_help. Показывает доступные команды в зависимости от роли пользователя.
-    """
-    telegram_id = update.effective_user.id
-
-    try:
-        user = await sync_to_async(CustomUser.objects.get)(telegram_id=telegram_id)
-
-        if user.is_superuser:
-            await update.message.reply_text(
-                f"👑 Помощь для администратора, {user.username}:\n"
-                "📊 /analytics - Просмотр аналитики\n"
-                "👥 /manage_users - Управление пользователями\n"
-                "📦 /orders - Управление заказами\n"
-                "ℹ️ /show_help - Помощь"
-            )
-        elif user.is_staff:
-            await update.message.reply_text(
-                f"🛠️ Помощь для сотрудника, {user.username}:\n"
-                "📦 /my_orders - Текущие заказы\n"
-                "🔄 /update_status - Обновление статуса заказов\n"
-                "ℹ️ /show_help - Помощь"
-            )
-        else:
-            keyboard = ReplyKeyboardMarkup(
-                [["📦 Мои заказы", "🛒 Корзина", "🛍️ Каталог", "ℹ️ Помощь"]],
-                resize_keyboard=True,
-                one_time_keyboard=False
-            )
-            await update.message.reply_text(
-                f"🌸 Здравствуйте, {user.username} (Клиент)!\n"
-                "🎉 Доступные команды:\n"
-                "📦 /view_orders - Мои заказы\n"
-                "🛒 /view_cart - Корзина\n"
-                "🛍️ /view_catalog - Каталог\n"
-                "ℹ️ /show_help - Помощь",
-                reply_markup=keyboard
-            )
-    except CustomUser.DoesNotExist:
-        await update.message.reply_text(
-            "🔗 Ваш аккаунт не привязан к системе.\n"
-            "Доступные команды:\n"
-            "📦 /start - Начать взаимодействие\n"
-            "🔗 /link <ваш_логин> - Привязать Telegram аккаунт\n"
-            "ℹ️ /show_help - Помощь"
-        )
-
 
 async def link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -159,14 +121,12 @@ async def link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except CustomUser.DoesNotExist:
         await update.message.reply_text("❌ Пользователь с таким логином не найден.")
 
-
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Отмена текущего действия.
     """
     await update.message.reply_text("🚫 Действие отменено.")
     return ConversationHandler.END
-
 
 def get_registration_handler():
     """
@@ -183,7 +143,6 @@ def get_registration_handler():
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
-
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Начало процесса регистрации.
@@ -192,7 +151,6 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📝 Введите желаемое имя пользователя:"
     )
     return USERNAME
-
 
 async def get_username(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -208,7 +166,6 @@ async def get_username(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🔒 Введите пароль:")
     return PASSWORD
 
-
 async def get_password(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Получение пароля для регистрации.
@@ -217,7 +174,6 @@ async def get_password(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['password'] = password
     await update.message.reply_text("📞 Введите ваш номер телефона:")
     return PHONE
-
 
 async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -235,7 +191,6 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text("🏠 Введите ваш адрес:")
     return ADDRESS
-
 
 async def get_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -260,3 +215,41 @@ async def get_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"⚠️ Произошла ошибка: {e}")
 
     return ConversationHandler.END
+
+
+async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Обработчик команды /help для администратора.
+    """
+    await update.message.reply_text(
+        "👑 Администраторская помощь:\n"
+        "📊 /analytics - Просмотр аналитики\n"
+        "👥 /manage_users - Управление пользователями\n"
+        "📦 /orders - Управление заказами\n"
+        "ℹ️ /help - Помощь"
+    )
+
+async def look_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Обработчик команды /look_help для сотрудника.
+    """
+    await update.message.reply_text(
+        "🛠️ Помощь для сотрудников:\n"
+        "📦 /my_orders - Текущие заказы\n"
+        "🔄 /update_status - Обновление статуса заказов\n"
+        "ℹ️ /look_help - Помощь посмотреть"
+    )
+
+async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Обработчик команды /show_help для клиента.
+    """
+    await update.message.reply_text(
+        "🌸 Клиентская помощь:\n"
+        "📦 /view_orders - Мои заказы\n"
+        "🛒 /view_cart - Корзина\n"
+        "🛍️ /view_catalog - Каталог\n"
+        "ℹ️ /show_help - Помощь показать"
+    )
+
+

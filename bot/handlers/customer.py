@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 
 # ======= Просмотр каталога товаров =======
-# ======= Просмотр каталога товаров =======
 async def view_catalog(update: Update, context: CallbackContext):
     """
     Отображение списка товаров с инлайн-кнопками для добавления в корзину.
@@ -475,9 +474,7 @@ async def view_orders(update: Update, context: CallbackContext):
 
 
 async def handle_customer_menu(update: Update, context: CallbackContext):
-    """
-    Обработчик кнопок меню клиента.
-    """
+
     text = update.message.text
 
     if text == "📦 Мои заказы":
@@ -490,6 +487,6 @@ async def handle_customer_menu(update: Update, context: CallbackContext):
         await show_help(update, context)
     else:
         await update.message.reply_text(
-            "⚠️ Команда не распознана. Пожалуйста, выберите пункт меню.",
+            "⚠️ Команда не распознана. Пожалуйста, выберите 333 пункт меню.",
             reply_markup=customer_keyboard
         )

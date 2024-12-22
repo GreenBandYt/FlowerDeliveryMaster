@@ -128,7 +128,7 @@ async def order_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Произошла ошибка при загрузке деталей заказа.")
         return ConversationHandler.END
 
-# ======= Управление заказами: Обновление статуса заказа =======
+
 async def update_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Обработчик inline-кнопок для смены статуса заказа.

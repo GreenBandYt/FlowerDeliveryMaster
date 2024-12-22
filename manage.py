@@ -11,7 +11,7 @@ import django
 
 # Настройка логирования
 logging.basicConfig(
-    level=logging.INFO,  # Уровень логирования уменьшен до INFO
+    level=logging.DEBUG,  # Уровень логирования уменьшен до INFO
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[logging.StreamHandler(sys.stdout)],
 )
