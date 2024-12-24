@@ -1,3 +1,5 @@
+# bot/handlers/common.py
+
 from prettytable import PrettyTable
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from telegram.ext import (ContextTypes, CommandHandler, ConversationHandler,
@@ -8,6 +10,10 @@ from asgiref.sync import sync_to_async
 from django.db.utils import IntegrityError
 import re
 import logging
+
+from bot.keyboards.admin_keyboards import admin_keyboard
+from bot.keyboards.staff_keyboards import staff_keyboard
+from bot.keyboards.customer_keyboards import customer_keyboard
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
@@ -27,11 +33,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = await sync_to_async(CustomUser.objects.get)(telegram_id=telegram_id)
 
         if user.is_superuser:
-            admin_keyboard = ReplyKeyboardMarkup(
-                [["📊 Аналитика", "👥 Пользователи", "📦 Заказы", "ℹ️ Помощь"]],
-                resize_keyboard=True,
-                one_time_keyboard=False
-            )
+            # Для администратора
             await update.message.reply_text(
                 f"👑 Здравствуйте, {user.username} (Администратор)!\n"
                 "💻 Доступные команды:\n"
@@ -42,11 +44,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=admin_keyboard
             )
         elif user.is_staff:
-            staff_keyboard = ReplyKeyboardMarkup(
-                [["📦 Текущие заказы", "🔄 Обновить статус", "ℹ️ Помощь посмотреть"]],
-                resize_keyboard=True,
-                one_time_keyboard=False
-            )
+            # Для сотрудника
             await update.message.reply_text(
                 f"🛠️ Здравствуйте, {user.username} (Сотрудник)!\n"
                 "🔧 Доступные команды:\n"
@@ -57,11 +55,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         else:
             # Для клиента
-            customer_keyboard = ReplyKeyboardMarkup(
-                [["📦 Мои заказы", "🛒 Корзина", "🛍️ Каталог", "ℹ️ Помощь показать"]],
-                resize_keyboard=True,
-                one_time_keyboard=False
-            )
             await update.message.reply_text(
                 f"🌸 Здравствуйте, {user.username} (Клиент)!\n"
                 "🎉 Доступные команды:\n"
