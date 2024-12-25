@@ -11,7 +11,8 @@ from catalog.models import Product, Cart, CartItem, Order, OrderItem
 import logging
 from bot.keyboards.customer_keyboards import customer_keyboard
 # from bot.handlers.customer import view_orders, view_cart, view_catalog, help
-from bot.handlers.common import show_help
+from bot.handlers.common import show_help, admin_help, look_help
+from bot.handlers.admin import analytics, manage_users, orders
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
@@ -483,10 +484,25 @@ async def handle_customer_menu(update: Update, context: CallbackContext):
         await view_cart(update, context)
     elif text == "🛍️ Каталог":
         await view_catalog(update, context)
-    elif text == "ℹ️ Помощь":
+    elif text == "ℹ️ Показать помощь":
         await show_help(update, context)
+    elif text == "ℹ️ Помощь":
+        await admin_help(update, context)
+    elif text == "ℹ️ Помощь посмотреть":
+        await look_help(update, context)
+    elif text == "📊 Аналитика":
+        await analytics(update, context)
+    elif text == "👥 Пользователи":
+        await manage_users(update, context)
+    elif text == "📦 Заказы":
+        await orders(update, context)
+
     else:
         await update.message.reply_text(
             "⚠️ Команда не распознана. Пожалуйста, выберите 333 пункт меню.",
             reply_markup=customer_keyboard
         )
+
+
+
+

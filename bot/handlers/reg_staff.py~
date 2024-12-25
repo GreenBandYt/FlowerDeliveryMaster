@@ -1,3 +1,5 @@
+# bot/handlers/reg_staff.py
+
 import logging
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 from bot.handlers.staff import (

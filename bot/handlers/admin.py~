@@ -28,7 +28,7 @@ async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📊 /analytics - Просмотр аналитики\n"
         "👥 /manage_users - Управление пользователями\n"
         "📦 /orders - Управление заказами\n"
-        "ℹ️ /admin_help - Помощь (этот список)",
+        "ℹ️ /admin_help - Помощь",
         parse_mode="Markdown"
     )
 
@@ -128,7 +128,7 @@ async def order_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Произошла ошибка при загрузке деталей заказа.")
         return ConversationHandler.END
 
-
+# ======= Управление заказами: Обновление статуса заказа =======
 async def update_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Обработчик inline-кнопок для смены статуса заказа.
@@ -366,3 +366,39 @@ async def analytics_period_handler(update: Update, context: CallbackContext) -> 
     )
     await query.edit_message_text(analytics_text, parse_mode="Markdown")
     return ConversationHandler.END
+
+
+async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Обработчик команды /help для администратора.
+    """
+    await update.message.reply_text(
+        "👑 Администраторская помощь:\n"
+        "📊 /analytics - Аналитика\n"
+        "👥 /manage_users - Пользователи\n"
+        "📦 /orders - Заказы\n"
+        "ℹ️ /help - Помощь"
+    )
+
+async def look_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Обработчик команды /look_help для сотрудника.
+    """
+    await update.message.reply_text(
+        "🛠️ Помощь для сотрудников:\n"
+        "📦 /my_orders - Текущие заказы\n"
+        "🔄 /update_status - Обновление статуса заказов\n"
+        "ℹ️ /look_help - Помощь посмотреть"
+    )
+
+async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info("Command /show_help invoked by user ID: %s", update.effective_user.id)
+    await update.message.reply_text(
+        "🌸 Клиентская помощь:\n"
+        "📦 /view_orders - Мои заказы\n"
+        "🛒 /view_cart - Корзина\n"
+        "🛍️ /view_catalog - Каталог\n"
+        "ℹ️ /show_help - Показать помощь"
+    )
+
+

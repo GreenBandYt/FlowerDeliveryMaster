@@ -216,9 +216,9 @@ async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     await update.message.reply_text(
         "👑 Администраторская помощь:\n"
-        "📊 /analytics - Просмотр аналитики\n"
-        "👥 /manage_users - Управление пользователями\n"
-        "📦 /orders - Управление заказами\n"
+        "📊 /analytics - Аналитика\n"
+        "👥 /manage_users - Пользователи\n"
+        "📦 /orders - Заказы\n"
         "ℹ️ /help - Помощь"
     )
 
@@ -234,15 +234,13 @@ async def look_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Обработчик команды /show_help для клиента.
-    """
+    logger.info("Command /show_help invoked by user ID: %s", update.effective_user.id)
     await update.message.reply_text(
         "🌸 Клиентская помощь:\n"
         "📦 /view_orders - Мои заказы\n"
         "🛒 /view_cart - Корзина\n"
         "🛍️ /view_catalog - Каталог\n"
-        "ℹ️ /show_help - Помощь показать"
+        "ℹ️ /show_help - Показать помощь"
     )
 
 

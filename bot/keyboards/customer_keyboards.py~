@@ -4,7 +4,7 @@ from telegram import ReplyKeyboardMarkup
 
 customer_keyboard = ReplyKeyboardMarkup(
     [
-        ["📦 Мои заказы", "🛒 Корзина", "🛍️ Каталог", "ℹ️ Помощь"]
+        ["📦 Мои заказы", "🛒 Корзина", "🛍️ Каталог", "ℹ️ Помощь показать"],
     ],
     resize_keyboard=True,
     one_time_keyboard=False
