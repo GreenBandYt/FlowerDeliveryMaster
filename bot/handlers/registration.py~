@@ -1,3 +1,5 @@
+# bot/handlers/registration.py
+
 import logging
 
 # Initialize logger
@@ -8,6 +10,7 @@ def register_handlers(application):
     """
     Centralized handler registration
     """
+    logger.info("Importing role-specific handler registration functions.")
     from bot.handlers.reg_common import register_common_handlers
     from bot.handlers.reg_admin import register_admin_handlers
     from bot.handlers.reg_customer import register_customer_handlers
@@ -17,10 +20,14 @@ def register_handlers(application):
     logger.info("Starting handler registration...")
     register_common_handlers(application)
     logger.info("Common handlers registered.")
+
     register_admin_handlers(application)
     logger.info("Admin handlers registered.")
+
     register_customer_handlers(application)
     logger.info("Customer handlers registered.")
+
     register_staff_handlers(application)
     logger.info("Staff handlers registered.")
+
     logger.info("All handlers successfully registered.")

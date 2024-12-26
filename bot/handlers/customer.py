@@ -4,18 +4,45 @@ import os
 from PIL import Image
 from telegram.constants import ParseMode  # Для HTML-разметки сообщений
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CallbackContext
+from telegram.ext import CallbackContext, ContextTypes
 from asgiref.sync import sync_to_async
 from prettytable import PrettyTable
 from catalog.models import Product, Cart, CartItem, Order, OrderItem
 import logging
+from users.models import CustomUser
 from bot.keyboards.customer_keyboards import customer_keyboard
 # from bot.handlers.customer import view_orders, view_cart, view_catalog, help
-from bot.handlers.common import show_help, admin_help, look_help
+
 from bot.handlers.admin import analytics, manage_users, orders
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
+
+
+async def customer_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Приветствие клиента.
+    """
+    user = await sync_to_async(CustomUser.objects.get)(telegram_id=update.effective_user.id)
+    await update.message.reply_text(
+        f"🌸 Здравствуйте, {user.username} (Клиент)!\n"
+        "🎉 Доступные команды:\n"
+        "📦 /view_orders - Мои заказы\n"
+        "🛒 /view_cart - Корзина\n"
+        "🛍️ /view_catalog - Каталог\n"
+        "ℹ️ /show_help - Помощь показать",
+        reply_markup=customer_keyboard
+    )
+
+async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info("Command /show_help invoked by user ID: %s", update.effective_user.id)
+    await update.message.reply_text(
+        "🌸 Клиентская помощь:\n"
+        "📦 /view_orders - Мои заказы\n"
+        "🛒 /view_cart - Корзина\n"
+        "🛍️ /view_catalog - Каталог\n"
+        "ℹ️ /show_help - Показать помощь"
+    )
 
 
 # ======= Просмотр каталога товаров =======
@@ -486,17 +513,6 @@ async def handle_customer_menu(update: Update, context: CallbackContext):
         await view_catalog(update, context)
     elif text == "ℹ️ Показать помощь":
         await show_help(update, context)
-    elif text == "ℹ️ Помощь":
-        await admin_help(update, context)
-    elif text == "ℹ️ Помощь посмотреть":
-        await look_help(update, context)
-    elif text == "📊 Аналитика":
-        await analytics(update, context)
-    elif text == "👥 Пользователи":
-        await manage_users(update, context)
-    elif text == "📦 Заказы":
-        await orders(update, context)
-
     else:
         await update.message.reply_text(
             "⚠️ Команда не распознана. Пожалуйста, выберите 333 пункт меню.",

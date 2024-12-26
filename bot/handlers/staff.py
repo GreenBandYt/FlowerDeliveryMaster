@@ -19,6 +19,30 @@ logger = logging.getLogger(__name__)
 AWAIT_ORDER_ID = 1
 AWAIT_NEW_STATUS = 2
 
+async def staff_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Приветствие сотрудника.
+    """
+    user = await sync_to_async(CustomUser.objects.get)(telegram_id=update.effective_user.id)
+    await update.message.reply_text(
+        f"🛠️ Здравствуйте, {user.username} (Сотрудник)!\n"
+        "🔧 Доступные команды:\n"
+        "📦 /my_orders - Текущие заказы\n"
+        "🔄 /update_status - Обновление статуса заказов\n"
+        "ℹ️ /look_help - Помощь посмотреть",
+        reply_markup=staff_keyboard
+    )
+
+async def look_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Обработчик команды /look_help для сотрудника.
+    """
+    await update.message.reply_text(
+        "🛠️ Помощь для сотрудников:\n"
+        "📦 /my_orders - Текущие заказы\n"
+        "🔄 /update_status - Обновление статуса заказов\n"
+        "ℹ️ /look_help - Помощь посмотреть"
+    )
 
 
 # ======= Уведомления =======

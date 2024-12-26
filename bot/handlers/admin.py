@@ -8,15 +8,31 @@ from users.models import CustomUser
 from catalog.models import Order
 from prettytable import PrettyTable
 from datetime import datetime, timedelta  # Для аналитики
+from bot.keyboards.admin_keyboards import admin_keyboard
 import logging
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
 
-# Состояние для ConversationHandler
-AWAIT_USER_ID = 2
-# Определяем состояния для ConversationHandler
+# Состояния для ConversationHandler
+AWAIT_USER_ID = 1
 CHOOSE_PERIOD, EXIT_ANALYTICS = range(2)
+
+
+async def admin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Приветствие администратора.
+    """
+    user = await sync_to_async(CustomUser.objects.get)(telegram_id=update.effective_user.id)
+    await update.message.reply_text(
+        f"👑 Здравствуйте, {user.username} (Администратор)!\n"
+        "💻 Доступные команды:\n"
+        "📊 /analytics - Просмотр аналитики\n"
+        "👥 /manage_users - Пользователи\n"
+        "📦 /orders - Управление заказами\n"
+        "ℹ️ /admin_help - Помощь",
+        reply_markup=admin_keyboard
+    )
 
 # ======= Помощь для администратора =======
 async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -34,6 +50,7 @@ async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Обработчик команды /orders
 AWAIT_ORDER_ID = 1
+
 
 # ======= Управление заказами: Просмотр всех заказов =======
 async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -164,23 +181,19 @@ async def update_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def manage_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Команда /manage_users для управления пользователями.
-    Отображает список пользователей с их ID, именем, email и статусом (Клиент или Сотрудник).
     """
     telegram_id = update.effective_user.id
     try:
-        # Проверяем, является ли пользователь администратором
         admin = await sync_to_async(CustomUser.objects.get)(telegram_id=telegram_id)
         if not admin.is_superuser:
             await update.message.reply_text("У вас нет доступа к этой команде.")
-            return
+            return ConversationHandler.END
 
-        # Получаем список пользователей, которые не являются администраторами
         users = await sync_to_async(lambda: list(CustomUser.objects.filter(is_superuser=False)))()
         if not users:
             await update.message.reply_text("Пользователи не найдены.")
-            return
+            return ConversationHandler.END
 
-        # Формируем таблицу с пользователями
         table = PrettyTable(["ID", "Имя", "Email", "Статус"])
         for user in users:
             status = "Сотрудник" if user.is_staff else "Клиент"
@@ -192,22 +205,31 @@ async def manage_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
         await update.message.reply_text("Введите ID пользователя для изменения его статуса:")
+        return AWAIT_USER_ID
     except CustomUser.DoesNotExist:
-        # Обработка случая, если пользователь не является администратором
         await update.message.reply_text("Ваш аккаунт не зарегистрирован как администратор.")
+        return ConversationHandler.END
     except Exception as e:
-        # Логируем и отображаем сообщение об ошибке
         logger.error(f"Ошибка в /manage_users: {e}", exc_info=True)
         await update.message.reply_text("Произошла ошибка.")
+        return ConversationHandler.END
 
 # ======= Обновление статуса пользователя =======
 async def update_user_is_staff(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Обработчик для ввода ID пользователя и отображения кнопок смены статуса (Сотрудник или Клиент).
+    Обработчик для ввода ID пользователя.
+    Отображает кнопки для смены статуса (Сотрудник/Клиент).
     """
+    text = update.message.text.strip()
+
+    # Проверяем, не вводит ли пользователь команду "Отмена"
+    if text.lower() == "/cancel" or text.lower() == "отмена":
+        await update.message.reply_text("Вы вышли из режима изменения статуса пользователей.")
+        return ConversationHandler.END
+
     try:
         # Получаем ID пользователя из сообщения
-        user_id = int(update.message.text)
+        user_id = int(text)
         user = await sync_to_async(CustomUser.objects.get)(id=user_id, is_superuser=False)
 
         # Формируем сообщение с информацией о пользователе
@@ -229,51 +251,57 @@ async def update_user_is_staff(update: Update, context: ContextTypes.DEFAULT_TYP
 
         # Отправляем сообщение с кнопками
         await update.message.reply_text(user_info, parse_mode="Markdown", reply_markup=reply_markup)
-        return ConversationHandler.END
+        return AWAIT_USER_ID
 
     except ValueError:
-        # Обработка неверного ввода ID
         await update.message.reply_text("Пожалуйста, введите корректный ID пользователя.")
         return AWAIT_USER_ID
     except CustomUser.DoesNotExist:
-        # Обработка случая, если пользователь не найден или является администратором
         await update.message.reply_text("Пользователь не найден или является администратором.")
         return AWAIT_USER_ID
     except Exception as e:
-        # Логируем и отображаем сообщение об ошибке
         logger.error(f"Ошибка в update_user_is_staff: {e}", exc_info=True)
         await update.message.reply_text("Произошла ошибка.")
         return ConversationHandler.END
 
 
-# ======= Callback-обработчик для смены статуса пользователя =======
+async def cancel_manage_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Выход из режима управления пользователями.
+    """
+    await update.message.reply_text("Вы вышли из режима управления пользователями.")
+    return ConversationHandler.END  # Завершение сессии
+
+
+# Callback-обработчик для отмены или смены статуса пользователя
 async def update_user_status_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Callback-обработчик для смены статуса is_staff или отмены.
-    """
     query = update.callback_query
     await query.answer()
 
     try:
-        callback_data = query.data
-        if callback_data.startswith("cancel_user_status_"):
-            # Обработка нажатия "Отмена"
-            await query.delete_message()  # Удаляем сообщение с кнопками
-            return
+        logger.info(f"Callback data received: {query.data}")
 
-        # Извлекаем ID пользователя и новый статус
-        _, user_id, is_staff = callback_data.split("_")
+        # Если нажата кнопка "Отмена"
+        if query.data.startswith("cancel_user_status_"):
+            await query.edit_message_text("⚠️ Действие отменено. Вы вышли из режима изменения статуса пользователя.")
+            return ConversationHandler.END  # Завершаем процесс корректно
+
+        # Обработка изменения статуса
+        _, user_id, is_staff = query.data.split("_")
         user = await sync_to_async(CustomUser.objects.get)(id=user_id)
 
-        # Обновляем статус is_staff
+        # Обновляем статус пользователя
         user.is_staff = is_staff == "true"
         await sync_to_async(user.save)()
 
         new_status = "Сотрудник" if user.is_staff else "Клиент"
         await query.edit_message_text(f"✅ Статус пользователя #{user.id} изменён на '{new_status}'.")
+        return ConversationHandler.END  # Завершаем процесс
     except Exception as e:
         logger.error(f"Ошибка при изменении статуса пользователя: {e}", exc_info=True)
         await query.edit_message_text("Произошла ошибка при изменении статуса.")
+        return ConversationHandler.END
+
 
 
 # ======= Обработчик для аналитики (ConversationHandler) =======
@@ -366,39 +394,3 @@ async def analytics_period_handler(update: Update, context: CallbackContext) -> 
     )
     await query.edit_message_text(analytics_text, parse_mode="Markdown")
     return ConversationHandler.END
-
-
-async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Обработчик команды /help для администратора.
-    """
-    await update.message.reply_text(
-        "👑 Администраторская помощь:\n"
-        "📊 /analytics - Аналитика\n"
-        "👥 /manage_users - Пользователи\n"
-        "📦 /orders - Заказы\n"
-        "ℹ️ /help - Помощь"
-    )
-
-async def look_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Обработчик команды /look_help для сотрудника.
-    """
-    await update.message.reply_text(
-        "🛠️ Помощь для сотрудников:\n"
-        "📦 /my_orders - Текущие заказы\n"
-        "🔄 /update_status - Обновление статуса заказов\n"
-        "ℹ️ /look_help - Помощь посмотреть"
-    )
-
-async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info("Command /show_help invoked by user ID: %s", update.effective_user.id)
-    await update.message.reply_text(
-        "🌸 Клиентская помощь:\n"
-        "📦 /view_orders - Мои заказы\n"
-        "🛒 /view_cart - Корзина\n"
-        "🛍️ /view_catalog - Каталог\n"
-        "ℹ️ /show_help - Показать помощь"
-    )
-
-

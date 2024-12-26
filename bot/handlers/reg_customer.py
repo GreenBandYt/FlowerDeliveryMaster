@@ -7,9 +7,6 @@ from bot.handlers.customer import (
     add_to_cart, remove_from_cart, confirm_checkout, cancel_checkout,
     decrease_quantity, increase_quantity, delete_item
 )
-from bot.handlers.admin import (
-    analytics, manage_users, orders
-)
 
 logger = logging.getLogger(__name__)
 
@@ -17,56 +14,44 @@ def register_customer_handlers(application):
     """
     Register handlers specific to the customer role.
     """
-    # Command handlers
+    # --- Командные обработчики ---
     application.add_handler(CommandHandler("view_orders", view_orders))
-    logger.info("Handler '/view_orders' registered.")
+    logger.info("Registered command handler: '/view_orders' for viewing orders.")
 
     application.add_handler(CommandHandler("view_catalog", view_catalog))
-    logger.info("Handler '/view_catalog' registered.")
+    logger.info("Registered command handler: '/view_catalog' for viewing the catalog.")
 
     application.add_handler(CommandHandler("view_cart", view_cart))
-    logger.info("Handler '/view_cart' registered.")
+    logger.info("Registered command handler: '/view_cart' for viewing the cart.")
 
     application.add_handler(CommandHandler("checkout", checkout))
-    logger.info("Handler '/checkout' registered.")
+    logger.info("Registered command handler: '/checkout' for starting checkout.")
 
-    application.add_handler(CommandHandler("analytics", analytics))
-    logger.info("Handler '/analytics' registered.")
-
-    application.add_handler(CommandHandler("manage_users", manage_users))
-    logger.info("Handler '/manage_users' registered.")
-
-    application.add_handler(CommandHandler("orders", orders))
-    logger.info("Handler '/orders' registered.")
-
-
-
-
-    # Menu handler
+    # --- Обработчик текстового меню ---
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_customer_menu))
-    logger.info("Customer menu handler registered.")
+    logger.info("Registered message handler for customer menu interaction.")
 
-    # Inline callback handlers
+    # --- Inline-обработчики для корзины ---
     application.add_handler(CallbackQueryHandler(add_to_cart, pattern=r"^add_to_cart_\d+$"))
-    logger.info("Handler for adding to cart callbacks registered.")
+    logger.info("Registered callback handler: 'add_to_cart' for adding items to the cart.")
 
     application.add_handler(CallbackQueryHandler(remove_from_cart, pattern=r"^remove_from_cart_\d+$"))
-    logger.info("Handler for removing from cart callbacks registered.")
+    logger.info("Registered callback handler: 'remove_from_cart' for removing items from the cart.")
 
     application.add_handler(CallbackQueryHandler(confirm_checkout, pattern="^confirm_checkout$"))
-    logger.info("Handler for confirm checkout callbacks registered.")
+    logger.info("Registered callback handler: 'confirm_checkout' for confirming checkout.")
 
     application.add_handler(CallbackQueryHandler(cancel_checkout, pattern="^cancel_checkout$"))
-    logger.info("Handler for cancel checkout callbacks registered.")
+    logger.info("Registered callback handler: 'cancel_checkout' for canceling checkout.")
 
     application.add_handler(CallbackQueryHandler(decrease_quantity, pattern=r"^decrease_\d+$"))
-    logger.info("Handler for decreasing item quantity callbacks registered.")
+    logger.info("Registered callback handler: 'decrease_quantity' for decreasing item quantity.")
 
     application.add_handler(CallbackQueryHandler(increase_quantity, pattern=r"^increase_\d+$"))
-    logger.info("Handler for increasing item quantity callbacks registered.")
+    logger.info("Registered callback handler: 'increase_quantity' for increasing item quantity.")
 
     application.add_handler(CallbackQueryHandler(delete_item, pattern=r"^delete_\d+$"))
-    logger.info("Handler for deleting item callbacks registered.")
+    logger.info("Registered callback handler: 'delete_item' for deleting items from the cart.")
 
     application.add_handler(CallbackQueryHandler(checkout, pattern="^checkout$"))
-    logger.info("Handler for checkout callback registered.")
+    logger.info("Registered callback handler: 'checkout' for proceeding to checkout.")
