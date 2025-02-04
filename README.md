@@ -95,7 +95,7 @@ python manage.py runserver
 ```
 
 После запуска, проект будет доступен по адресу:  
-📍 **http://127.0.0.1:8000/**  
+📍 **[https://bandurayvgpt.pythonanywhere.com](https://bandurayvgpt.pythonanywhere.com)**  
 
 ---
 
