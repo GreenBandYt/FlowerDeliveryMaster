@@ -1,19 +1,13 @@
-# bot/handlers/common.py
+# bot/handlers/new_user.py
 
-
+import logging
 from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import (ContextTypes, CommandHandler, ConversationHandler,
-                          MessageHandler, filters)
+from telegram.ext import ContextTypes, CommandHandler, ConversationHandler, MessageHandler, filters
 from users.models import CustomUser
-
 from asgiref.sync import sync_to_async
 from django.db.utils import IntegrityError
 import re
-import logging
-
-from bot.handlers.admin import admin_start
-from bot.handlers.staff import staff_start
-from bot.handlers.customer import customer_start
+from bot.keyboards.new_user_keyboards import new_user_keyboard
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
@@ -22,37 +16,30 @@ logging.basicConfig(level=logging.INFO)
 # Состояния для регистрации
 USERNAME, PASSWORD, PHONE, ADDRESS = range(4)
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def new_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Обработчик команды /start. Приветствует пользователя в зависимости от его роли
-    и добавляет меню с кнопками.
+    Приветствие незарегистрированного пользователя.
     """
-    telegram_id = update.effective_user.id
-    try:
-        # Получаем пользователя по Telegram ID
-        user = await sync_to_async(CustomUser.objects.get)(telegram_id=telegram_id)
-        # Определяем роль и вызываем соответствующую функцию
-        if user.is_superuser:
-            await admin_start(update, context)
-        elif user.is_staff:
-            await staff_start(update, context)
-        else:
-            await customer_start(update, context)
-    except CustomUser.DoesNotExist:
-        # Обработка для незарегистрированных пользователей
-        keyboard = ReplyKeyboardMarkup(
-            [["🔗 Привязать аккаунт", "📝 Зарегистрироваться"], ["ℹ️ Помощь"]],
-            resize_keyboard=True,
-            one_time_keyboard=True
-        )
-        await update.message.reply_text(
-            "👋 Добро пожаловать в систему!\n"
-            "Ваш аккаунт не привязан.\n\n"
-            "🔗 Используйте команду /link для привязки существующего аккаунта.\n"
-            "📝 Или выберите /register чтобы создать новый аккаунт.\n"
-            "ℹ️ Воспользуйтесь командой /show_help для получения помощи.",
-            reply_markup=keyboard
-        )
+    keyboard = new_user_keyboard
+    await update.message.reply_text(
+        "👋 Добро пожаловать в систему!\n"
+        "Ваш аккаунт не привязан.\n\n"
+        "🔗 Используйте команду /link для привязки существующего аккаунта.\n"
+        "📝 Или выберите /register чтобы создать новый аккаунт.\n"
+        "ℹ️ Воспользуйтесь командой /help_new_user для получения помощи.",
+        reply_markup=keyboard
+    )
+
+async def help_new_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Помощь для незарегистрированного пользователя.
+    """
+    await update.message.reply_text(
+        "ℹ️ **Помощь для незарегистрированного пользователя:**\n\n"
+        "🔗 /link - Привязать аккаунт.\n"
+        "📝 /register - Зарегистрироваться в системе.\n"
+        "👀 /help_new_user - Показать это сообщение."
+    )
 
 async def link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -87,13 +74,6 @@ async def link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except CustomUser.DoesNotExist:
         await update.message.reply_text("❌ Пользователь с таким логином не найден.")
 
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Отмена текущего действия.
-    """
-    await update.message.reply_text("🚫 Действие отменено.")
-    return ConversationHandler.END
-
 def get_registration_handler():
     """
     Возвращает ConversationHandler для регистрации пользователя.
@@ -106,7 +86,7 @@ def get_registration_handler():
             PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_phone)],
             ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_address)],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[],
     )
 
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -127,6 +107,11 @@ async def get_username(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if username.lower() == "отмена":
         await update.message.reply_text("🚫 Регистрация отменена.")
         return ConversationHandler.END
+
+    existing_user = await sync_to_async(CustomUser.objects.filter(username=username).exists)()
+    if existing_user:
+        await update.message.reply_text("❌ Такое имя пользователя уже существует. Попробуйте другое имя.")
+        return USERNAME
 
     context.user_data['username'] = username
     await update.message.reply_text("🔒 Введите пароль:")

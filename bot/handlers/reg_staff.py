@@ -1,10 +1,9 @@
 # bot/handlers/reg_staff.py
 
 import logging
-from telegram.ext import CommandHandler, MessageHandler, CallbackQueryHandler, filters
+from telegram.ext import CommandHandler, CallbackQueryHandler
 from bot.handlers.staff import (
-    my_orders, update_order_status, handle_staff_menu, complete_order_callback,
-    take_order, look_help
+    my_orders, update_order_status, complete_order_callback, take_order, look_help
 )
 
 logger = logging.getLogger(__name__)
@@ -22,10 +21,6 @@ def register_staff_handlers(application):
 
     application.add_handler(CommandHandler("look_help", look_help))
     logger.info("Registered command handler: '/look_help' for staff help.")
-
-    # --- Обработчик текстового меню ---
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_staff_menu))
-    logger.info("Registered message handler: staff menu interaction.")
 
     # --- Inline-обработчики ---
     application.add_handler(CallbackQueryHandler(complete_order_callback, pattern=r"^complete_order_\d+$"))

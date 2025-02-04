@@ -1,11 +1,12 @@
 # bot/handlers/reg_admin.py
 
 import logging
-from telegram.ext import CommandHandler, CallbackQueryHandler, ConversationHandler, MessageHandler, filters
+from telegram.ext import CommandHandler, CallbackQueryHandler, ConversationHandler
+
 from bot.handlers.admin import (
-    manage_users, get_analytics_handler, update_user_status_callback, orders,
-    admin_help, analytics, update_order_status, update_user_is_staff, cancel_manage_users
+    manage_users, get_analytics_handler, orders, admin_help, analytics, update_order_status, update_user_status_callback, cancel_manage_users
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +16,7 @@ AWAIT_USER_ID = 1
 # ConversationHandler для управления пользователями
 manage_users_handler = ConversationHandler(
     entry_points=[CommandHandler("manage_users", manage_users)],
-    states={
-        AWAIT_USER_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, update_user_is_staff)],
-    },
+    states={AWAIT_USER_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, update_user_is_staff)]},
     fallbacks=[CommandHandler("cancel", cancel_manage_users)],
 )
 
@@ -26,7 +25,7 @@ def register_admin_handlers(application):
     """
     Register handlers specific to the admin role.
     """
-    # Командные обработчики
+    # Командные хендлеры
     application.add_handler(CommandHandler("admin_help", admin_help))
     logger.info("Handler '/admin_help' registered.")
 

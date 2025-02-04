@@ -1,9 +1,9 @@
 # bot/handlers/reg_customer.py
 
 import logging
-from telegram.ext import CommandHandler, MessageHandler, CallbackQueryHandler, filters
+from telegram.ext import CommandHandler, CallbackQueryHandler
 from bot.handlers.customer import (
-    view_orders, view_catalog, view_cart, checkout, handle_customer_menu,
+    view_orders, view_catalog, view_cart, checkout,
     add_to_cart, remove_from_cart, confirm_checkout, cancel_checkout,
     decrease_quantity, increase_quantity, delete_item
 )
@@ -26,10 +26,6 @@ def register_customer_handlers(application):
 
     application.add_handler(CommandHandler("checkout", checkout))
     logger.info("Registered command handler: '/checkout' for starting checkout.")
-
-    # --- Обработчик текстового меню ---
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_customer_menu))
-    logger.info("Registered message handler for customer menu interaction.")
 
     # --- Inline-обработчики для корзины ---
     application.add_handler(CallbackQueryHandler(add_to_cart, pattern=r"^add_to_cart_\d+$"))

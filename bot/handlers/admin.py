@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 AWAIT_USER_ID = 1
 CHOOSE_PERIOD, EXIT_ANALYTICS = range(2)
 
-
 async def admin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Приветствие администратора.
@@ -44,13 +43,11 @@ async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📊 /analytics - Аналитика\n"
         "👥 /manage_users - Пользователи\n"
         "📦 /orders - Заказы\n"
-        "ℹ️ /admin_help - Помощь",
-        parse_mode="Markdown"
+        "ℹ️ /admin_help - Помощь"
     )
 
 # Обработчик команды /orders
 AWAIT_ORDER_ID = 1
-
 
 # ======= Управление заказами: Просмотр всех заказов =======
 async def orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -173,9 +170,6 @@ async def update_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE
     except Exception as e:
         logger.error(f"Ошибка при изменении статуса заказа: {e}", exc_info=True)
         await query.edit_message_text("Произошла ошибка при изменении статуса заказа.")
-
-
-
 
 # ======= Управление пользователями =======
 async def manage_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -394,3 +388,4 @@ async def analytics_period_handler(update: Update, context: CallbackContext) -> 
     )
     await query.edit_message_text(analytics_text, parse_mode="Markdown")
     return ConversationHandler.END
+
