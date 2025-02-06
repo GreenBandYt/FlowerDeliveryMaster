@@ -152,6 +152,8 @@ FlowerDeliveryMaster/
 
 /Разработано в рамках учебного проекта./
 
+---
+
 ### 📬 Контакты
 
 - **Email:** [bandurayv@yandex.ru](mailto:bandurayv@yandex.ru)
