@@ -149,9 +149,12 @@ FlowerDeliveryMaster/
 
 ## ✨ **Автор**
 
+<a href="https://github.com/GreenBandYt" target="_blank" rel="noopener noreferrer">
 Разработано в рамках учебного проекта.  
 
-📧 **Контакт**: [BanduraYV@yandex.ru](mailto:BanduraYV@yandex.ru)
+### 📬 Контакты
+
+- **Email:** [bandurayv@yandex.ru](mailto:bandurayv@yandex.ru)
 - **Telegram:** [@BandYuraV](https://t.me/BandYuraV)
 
 
