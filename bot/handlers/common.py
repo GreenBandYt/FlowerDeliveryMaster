@@ -1,16 +1,13 @@
+# bot/handlers/common.py
+
+import logging
 from telegram import Update
 from telegram.ext import ContextTypes
 from users.models import CustomUser
 from asgiref.sync import sync_to_async
-import logging
-
-from bot.handlers.admin import admin_start
-from bot.handlers.staff import staff_start
-from bot.handlers.customer import customer_start
-from bot.handlers.new_user import new_user_start
-
 from bot.dictionaries.text_actions import TEXT_ACTIONS
 from bot.dictionaries.callback_actions import CALLBACK_ACTIONS
+from bot.utils.callback_parser import parse_callback_data  # Новый парсер
 from django.core.cache import cache
 
 # Настройка логгера
@@ -25,14 +22,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     telegram_id = update.effective_user.id
     try:
-        # Получаем пользователя по Telegram ID
         user = await sync_to_async(CustomUser.objects.filter(telegram_id=telegram_id).first)()
 
         if user:
-            # Логирование успешной идентификации роли
             logger.info(f"Пользователь найден: {user.username}, superuser={user.is_superuser}, staff={user.is_staff}")
-
-            # Определяем роль и вызываем соответствующую функцию
             if user.is_superuser:
                 await admin_start(update, context)
             elif user.is_staff:
@@ -40,12 +33,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 await customer_start(update, context)
         else:
-            # Логирование отсутствия пользователя
             logger.warning(f"Пользователь с Telegram ID {telegram_id} не найден.")
-            # Перенаправляем незарегистрированного пользователя
             await new_user_start(update, context)
     except Exception as e:
-        # Логирование ошибок
         logger.error(f"Ошибка при обработке команды /start: {e}")
         await update.message.reply_text("Произошла ошибка. Попробуйте позже.")
 
@@ -54,10 +44,13 @@ async def handle_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Универсальный обработчик текста от пользователя.
     """
+    if context.user_data.get("state") is not None:
+        logger.info("Активное состояние обнаружено в context.user_data, пропускаем универсальный обработчик.")
+        return
+
     user_text = update.message.text.strip()
     telegram_id = update.effective_user.id
 
-    # Определяем роль пользователя
     role = cache.get(f"user_role_{telegram_id}")
     if not role:
         user = await sync_to_async(CustomUser.objects.filter(telegram_id=telegram_id).first)()
@@ -67,14 +60,11 @@ async def handle_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             role = "new_user"
 
-    # Проверяем текстовые команды в словаре
     action = TEXT_ACTIONS.get(user_text)
-
     if action:
-        await action(update, context)  # Вызываем функцию напрямую
+        await action(update, context)
         return
 
-    # Если ничего не найдено, отправляем сообщение по умолчанию
     await update.message.reply_text(
         "Извините, я вас не понял. Попробуйте уточнить запрос или воспользуйтесь кнопками меню. 🤔"
     )
@@ -85,25 +75,23 @@ async def handle_inline_buttons(update: Update, context: ContextTypes.DEFAULT_TY
     Универсальный обработчик для инлайн-кнопок.
     """
     query = update.callback_query
-    await query.answer()  # Подтверждаем нажатие кнопки
+    await query.answer()
 
-    callback_data = query.data  # Получаем callback_data кнопки
-    logging.info(f"Получено callback_data: {callback_data}")
+    callback_data = query.data
+    action, params = parse_callback_data(callback_data)
+    logger.info(f"Получено callback_data: action={action}, params={params}")
 
-    # Проверяем наличие callback_data в словаре
-    action = CALLBACK_ACTIONS.get(callback_data)
-    if action:
+    action_func = CALLBACK_ACTIONS.get(action)
+    if action_func:
         try:
-            # Вызываем функцию напрямую из словаря
-            await globals()[action](update, context)
-        except KeyError:
-            logging.error(f"Функция для callback_data '{callback_data}' не найдена.")
+            await action_func(update, context, *params)
+        except Exception as e:
+            logger.error(f"Ошибка при выполнении действия для '{callback_data}': {e}", exc_info=True)
             await query.edit_message_text(
                 "Произошла ошибка при выполнении действия. Обратитесь к администратору."
             )
     else:
-        # Если callback_data отсутствует в словаре
-        logging.warning(f"Неизвестное callback_data: {callback_data}")
+        logger.warning(f"Неизвестное callback_data: {callback_data}")
         await query.edit_message_text(
             "Кнопка больше не активна. Попробуйте снова или обратитесь к администратору."
         )

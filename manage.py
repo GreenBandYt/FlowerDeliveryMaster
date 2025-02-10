@@ -8,6 +8,7 @@ import requests
 import logging
 from multiprocessing import Process
 import django
+import psutil
 
 # Настройка логирования
 logging.basicConfig(
@@ -15,7 +16,6 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[logging.StreamHandler(sys.stdout)],
 )
-
 
 def wait_for_server(url, retries=10, delay=2):
     """Проверяет доступность сервера по указанному URL."""
@@ -35,15 +35,40 @@ def wait_for_server(url, retries=10, delay=2):
 
 def run_bot():
     """Функция для запуска Telegram-бота."""
+    # Удаляем флаг, если он существует, чтобы гарантировать перезапуск бота
+    if os.path.exists("bot_running.flag"):
+        os.remove("bot_running.flag")
+
+    # Остановим предыдущий процесс бота, если он запущен
+    if os.path.exists("bot_running.flag"):
+        with open("bot_running.flag", "r") as f:
+            pid = f.read().strip()  # Считываем PID бота из флага
+            try:
+                # Завершаем процесс бота по PID
+                p = psutil.Process(int(pid))
+                p.terminate()  # Или p.kill() для насильного завершения
+                logging.info(f"Бот с PID {pid} остановлен.")
+            except psutil.NoSuchProcess:
+                logging.warning("Не удалось найти процесс бота.")
+
     try:
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "flowerdelivery.settings")
         django.setup()
         from bot.management.commands.run_telegram_bot import Command
         bot_command = Command()
         bot_command.run()
+
         logging.info("Telegram-бот успешно запущен.")
+
+        # Создаем флаг только после успешного запуска и сохраняем PID процесса
+        with open("bot_running.flag", "w") as f:
+            f.write(str(os.getpid()))  # Сохраняем PID процесса бота
+
     except Exception as e:
         logging.error(f"Ошибка при запуске Telegram-бота: {e}", exc_info=True)
+        # Если возникла ошибка, удаляем флаг, чтобы попытаться перезапустить бота в следующий раз
+        if os.path.exists("bot_running.flag"):
+            os.remove("bot_running.flag")
 
 
 def run_server():

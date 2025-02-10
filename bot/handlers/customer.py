@@ -13,7 +13,7 @@ from users.models import CustomUser
 from bot.keyboards.customer_keyboards import customer_keyboard
 # from bot.handlers.customer import view_orders, view_cart, view_catalog, help
 
-from bot.handlers.admin import analytics, manage_users, orders
+# from bot.handlers.admin import analytics, manage_users, orders
 
 # Настройка логгера
 logger = logging.getLogger(__name__)

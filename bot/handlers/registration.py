@@ -1,57 +1,33 @@
 # bot/handlers/registration.py
 
 import logging
+from telegram.ext import MessageHandler, CallbackQueryHandler, CommandHandler, filters
 
-# Initialize logger
+# Импорты универсальных обработчиков
+from bot.handlers.common import handle_user_input, handle_inline_buttons, start
+# Импорт специфичных обработчиков (например, для команды /start)
+from bot.handlers.admin import admin_start
+
+# Настройка логгера
 logger = logging.getLogger(__name__)
-
-# Import role-specific handler registration functions
-from bot.handlers.reg_common import register_common_handlers
-from bot.handlers.reg_admin import register_admin_handlers
-from bot.handlers.reg_customer import register_customer_handlers
-from bot.handlers.reg_staff import register_staff_handlers
-from bot.handlers.reg_new_user import register_new_user_handlers  # Добавлено для новой роли
-
 
 def register_handlers(application):
     """
-    Centralized handler registration
+    Центральная регистрация обработчиков.
     """
-    logger.info("Starting handler registration...")
 
-    try:
-        logger.info("Registering new user handlers...")
-        register_new_user_handlers(application)  # Регистрация обработчиков для незарегистрированных пользователей
-        logger.info("New user handlers registered.")
-    except Exception as e:
-        logger.error(f"Error registering new user handlers: {e}")
+    logger.info("Начинается регистрация обработчиков...")
 
-    try:
-        logger.info("Registering common handlers...")
-        register_common_handlers(application)
-        logger.info("Common handlers registered.")
-    except Exception as e:
-        logger.error(f"Error registering common handlers: {e}")
+    # Регистрация универсального обработчика текстовых сообщений
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_input))
+    logger.info("Универсальный обработчик текстовых сообщений зарегистрирован.")
 
-    try:
-        logger.info("Registering admin handlers...")
-        register_admin_handlers(application)
-        logger.info("Admin handlers registered.")
-    except Exception as e:
-        logger.error(f"Error registering admin handlers: {e}")
+    # Регистрация универсального обработчика инлайн-кнопок
+    application.add_handler(CallbackQueryHandler(handle_inline_buttons))
+    logger.info("Универсальный обработчик инлайн-кнопок зарегистрирован.")
 
-    try:
-        logger.info("Registering customer handlers...")
-        register_customer_handlers(application)
-        logger.info("Customer handlers registered.")
-    except Exception as e:
-        logger.error(f"Error registering customer handlers: {e}")
+    # Регистрация специфичного обработчика для команды /start
+    application.add_handler(CommandHandler("start", start))
+    logger.info("Обработчик команды /start зарегистрирован.")
 
-    try:
-        logger.info("Registering staff handlers...")
-        register_staff_handlers(application)
-        logger.info("Staff handlers registered.")
-    except Exception as e:
-        logger.error(f"Error registering staff handlers: {e}")
-
-    logger.info("Handler registration process completed successfully.")
+    logger.info("Регистрация обработчиков завершена успешно.")
