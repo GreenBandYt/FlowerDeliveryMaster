@@ -1,3 +1,5 @@
+# bot/handlers/admin.py
+
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
@@ -15,7 +17,8 @@ logging.basicConfig(level=logging.INFO)
 
 
 # ======= Обработчик команды /start =======
-async def admin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def admin_start(update: Update, context: ContextTypes.DEFAULT_TYPE, user: CustomUser):
+
     """
     Приветствие администратора.
     """
@@ -231,18 +234,16 @@ async def update_user_status_callback(update: Update, context: ContextTypes.DEFA
 
 # ======= Кнопки для аналитики =======
 def get_analytics_buttons():
-    """
-    Генерация кнопок для выбора периода аналитики.
-    """
     keyboard = [
-        [InlineKeyboardButton("Сегодня", callback_data="analytics_period:today")],
-        [InlineKeyboardButton("Последние 7 дней", callback_data="analytics_period:week")],
-        [InlineKeyboardButton("Текущий месяц", callback_data="analytics_period:month")],
-        [InlineKeyboardButton("Текущий год", callback_data="analytics_period:year")],
-        [InlineKeyboardButton("Всё время", callback_data="analytics_period:all")],
-        [InlineKeyboardButton("Отмена", callback_data="analytics_period:cancel")],
+        [InlineKeyboardButton("Сегодня", callback_data="analytics_today")],
+        [InlineKeyboardButton("Последние 7 дней", callback_data="analytics_week")],
+        [InlineKeyboardButton("Текущий месяц", callback_data="analytics_month")],
+        [InlineKeyboardButton("Текущий год", callback_data="analytics_year")],
+        [InlineKeyboardButton("Всё время", callback_data="analytics_all_time")],
+        [InlineKeyboardButton("Отмена", callback_data="analytics_cancel")],
     ]
     return InlineKeyboardMarkup(keyboard)
+
 
 
 # ======= Точка входа в аналитику =======
@@ -256,64 +257,179 @@ async def handle_admin_analytics(update: Update, context: ContextTypes.DEFAULT_T
         parse_mode="Markdown",
     )
 
-
-# ======= Обработчик выбора периода аналитики =======
-async def analytics_period_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def analytics_today(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Обрабатывает выбор периода аналитики и отправляет данные.
+    Обрабатывает запрос аналитики за сегодня.
     """
     query = update.callback_query
     await query.answer()
 
     try:
-        action, params = parse_callback_data(query.data)
-        if action != "analytics_period":
-            await query.edit_message_text("Неверный формат данных.")
-            return
-
-        period = params[0]
-        title = ""
-        filter_kwargs = {}
-
-        if period == "today":
-            filter_kwargs = {"created_at__date": datetime.now().date()}
-            title = "Сегодня"
-        elif period == "week":
-            filter_kwargs = {"created_at__gte": datetime.now().date() - timedelta(days=7)}
-            title = "Последние 7 дней"
-        elif period == "month":
-            filter_kwargs = {
-                "created_at__month": datetime.now().month,
-                "created_at__year": datetime.now().year,
-            }
-            title = "Текущий месяц"
-        elif period == "year":
-            filter_kwargs = {"created_at__year": datetime.now().year}
-            title = "Текущий год"
-        elif period == "all":
-            filter_kwargs = {}
-            title = "Всё время"
-        elif period == "cancel":
-            await query.edit_message_text("🔙 Вы вышли из аналитики.")
-            return
-
-        # Получение данных аналитики
-        total_orders = await sync_to_async(lambda: Order.objects.filter(**filter_kwargs).count())()
-        total_revenue = await sync_to_async(
-            lambda: sum(order.total_price for order in Order.objects.filter(**filter_kwargs))
-        )()
-        average_order_value = total_revenue / total_orders if total_orders > 0 else 0
-        total_users = await sync_to_async(lambda: CustomUser.objects.count())()
-
-        analytics_text = (
-            f"📊 **Аналитика за {title}:**\n\n"
-            f"👤 Пользователи: **{total_users}**\n"
-            f"📦 Всего заказов: **{total_orders}**\n"
-            f"💰 Общий доход: **{total_revenue:.2f} ₽**\n"
-            f"🧾 Средний чек: **{average_order_value:.2f} ₽**"
-        )
+        filter_kwargs = {"created_at__date": datetime.now().date()}
+        analytics_text = await get_analytics_text("Сегодня", filter_kwargs)
         await query.edit_message_text(analytics_text, parse_mode="Markdown")
-
     except Exception as e:
-        logger.error(f"Ошибка в analytics_period_handler: {e}", exc_info=True)
-        await query.edit_message_text("Произошла ошибка при обработке аналитики.")
+        logger.error(f"Ошибка в analytics_today: {e}", exc_info=True)
+        await query.edit_message_text("❌ Ошибка при загрузке аналитики.")
+
+
+async def analytics_week(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Обрабатывает запрос аналитики за последние 7 дней.
+    """
+    query = update.callback_query
+    await query.answer()
+
+    try:
+        filter_kwargs = {"created_at__gte": datetime.now().date() - timedelta(days=7)}
+        analytics_text = await get_analytics_text("Последние 7 дней", filter_kwargs)
+        await query.edit_message_text(analytics_text, parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Ошибка в analytics_week: {e}", exc_info=True)
+        await query.edit_message_text("❌ Ошибка при загрузке аналитики.")
+
+
+async def analytics_month(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Обрабатывает запрос аналитики за текущий месяц.
+    """
+    query = update.callback_query
+    await query.answer()
+
+    try:
+        filter_kwargs = {
+            "created_at__month": datetime.now().month,
+            "created_at__year": datetime.now().year,
+        }
+        analytics_text = await get_analytics_text("Текущий месяц", filter_kwargs)
+        await query.edit_message_text(analytics_text, parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Ошибка в analytics_month: {e}", exc_info=True)
+        await query.edit_message_text("❌ Ошибка при загрузке аналитики.")
+
+
+async def analytics_year(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Обрабатывает запрос аналитики за текущий год.
+    """
+    query = update.callback_query
+    await query.answer()
+
+    try:
+        filter_kwargs = {"created_at__year": datetime.now().year}
+        analytics_text = await get_analytics_text("Текущий год", filter_kwargs)
+        await query.edit_message_text(analytics_text, parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Ошибка в analytics_year: {e}", exc_info=True)
+        await query.edit_message_text("❌ Ошибка при загрузке аналитики.")
+
+
+async def analytics_all_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Обрабатывает запрос аналитики за всё время.
+    """
+    query = update.callback_query
+    await query.answer()
+
+    try:
+        filter_kwargs = {}  # Все заказы без ограничений по времени
+        analytics_text = await get_analytics_text("Всё время", filter_kwargs)
+        await query.edit_message_text(analytics_text, parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Ошибка в analytics_all_time: {e}", exc_info=True)
+        await query.edit_message_text("❌ Ошибка при загрузке аналитики.")
+
+
+async def analytics_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Отмена запроса аналитики.
+    """
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text("🔙 Вы вышли из аналитики.")
+
+
+async def get_analytics_text(title: str, filter_kwargs: dict) -> str:
+    """
+    Формирует текст аналитики по заданным фильтрам.
+    """
+    total_orders = await sync_to_async(lambda: Order.objects.filter(**filter_kwargs).count())()
+    total_revenue = await sync_to_async(
+        lambda: sum(order.total_price for order in Order.objects.filter(**filter_kwargs))
+    )()
+    average_order_value = total_revenue / total_orders if total_orders > 0 else 0
+    total_users = await sync_to_async(lambda: CustomUser.objects.count())()
+
+    analytics_text = (
+        f"📊 **Аналитика за {title}:**\n\n"
+        f"👤 Пользователи: **{total_users}**\n"
+        f"📦 Всего заказов: **{total_orders}**\n"
+        f"💰 Общий доход: **{total_revenue:.2f} ₽**\n"
+        f"🧾 Средний чек: **{average_order_value:.2f} ₽**"
+    )
+    return analytics_text
+
+
+
+
+#
+# # ======= Обработчик выбора периода аналитики =======
+# async def analytics_period_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     """
+#     Обрабатывает выбор периода аналитики и отправляет данные.
+#     """
+#     query = update.callback_query
+#     await query.answer()
+#
+#     try:
+#         action, params = parse_callback_data(query.data)
+#         if action != "analytics_period":
+#             await query.edit_message_text("Неверный формат данных.")
+#             return
+#
+#         period = params[0]
+#         title = ""
+#         filter_kwargs = {}
+#
+#         if period == "today":
+#             filter_kwargs = {"created_at__date": datetime.now().date()}
+#             title = "Сегодня"
+#         elif period == "week":
+#             filter_kwargs = {"created_at__gte": datetime.now().date() - timedelta(days=7)}
+#             title = "Последние 7 дней"
+#         elif period == "month":
+#             filter_kwargs = {
+#                 "created_at__month": datetime.now().month,
+#                 "created_at__year": datetime.now().year,
+#             }
+#             title = "Текущий месяц"
+#         elif period == "year":
+#             filter_kwargs = {"created_at__year": datetime.now().year}
+#             title = "Текущий год"
+#         elif period == "all":
+#             filter_kwargs = {}
+#             title = "Всё время"
+#         elif period == "cancel":
+#             await query.edit_message_text("🔙 Вы вышли из аналитики.")
+#             return
+#
+#         # Получение данных аналитики
+#         total_orders = await sync_to_async(lambda: Order.objects.filter(**filter_kwargs).count())()
+#         total_revenue = await sync_to_async(
+#             lambda: sum(order.total_price for order in Order.objects.filter(**filter_kwargs))
+#         )()
+#         average_order_value = total_revenue / total_orders if total_orders > 0 else 0
+#         total_users = await sync_to_async(lambda: CustomUser.objects.count())()
+#
+#         analytics_text = (
+#             f"📊 **Аналитика за {title}:**\n\n"
+#             f"👤 Пользователи: **{total_users}**\n"
+#             f"📦 Всего заказов: **{total_orders}**\n"
+#             f"💰 Общий доход: **{total_revenue:.2f} ₽**\n"
+#             f"🧾 Средний чек: **{average_order_value:.2f} ₽**"
+#         )
+#         await query.edit_message_text(analytics_text, parse_mode="Markdown")
+#
+#     except Exception as e:
+#         logger.error(f"Ошибка в analytics_period_handler: {e}", exc_info=True)
+#         await query.edit_message_text("Произошла ошибка при обработке аналитики.")
