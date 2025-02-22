@@ -3,7 +3,7 @@
 from telegram import ReplyKeyboardMarkup
 
 staff_keyboard = ReplyKeyboardMarkup(
-    [["📦 Текущие заказы", "🔄 Обновить статус", "❓ Помощь"]],
+    [["📦 Новые заказы", "🔄 Текущие заказы", "❓ Помощь"]],
     resize_keyboard=True,
     one_time_keyboard=False
 )

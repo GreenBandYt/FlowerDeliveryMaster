@@ -16,10 +16,15 @@ from bot.handlers.admin import (
     handle_assign_executor,
     handle_set_executor,
     handle_admin_orders,
+    )
 
-)
-
-from bot.handlers.staff import update_order_status
+from bot.handlers.staff import (
+    update_order_status,
+    handle_staff_new_orders,
+    handle_staff_take_order,
+    handle_staff_my_orders,
+    handle_staff_order_details,
+    )
 
 
 from bot.handlers.common_helpers import feature_in_development
@@ -50,5 +55,9 @@ CALLBACK_ACTIONS = {
 
     # 🔧 В разработке
     "feature_in_development": feature_in_development,
+
+    # 🔹 Управление заказами для Сотрудника
+    "staff_take_order": handle_staff_take_order,
+    "staff_order_details" : handle_staff_order_details,
 }
 

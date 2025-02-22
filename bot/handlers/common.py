@@ -30,7 +30,12 @@ from bot.handlers.admin import (
 )
 from bot.handlers.admin import (handle_user_status_update_request, cancel_user_status_callback,)
 
-from bot.handlers.staff import staff_start
+from bot.handlers.staff import (staff_start,
+    handle_staff_new_orders,
+    handle_staff_take_order,
+    handle_staff_my_orders,
+    )
+
 from bot.handlers.customer import customer_start
 
 from bot.handlers.new_user import new_user_start
