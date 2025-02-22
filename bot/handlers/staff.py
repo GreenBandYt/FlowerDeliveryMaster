@@ -14,14 +14,22 @@ import logging
 import asyncio
 from telegram.ext import Application
 
+from pathlib import Path
+from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.constants import ParseMode
+from telegram.ext import ContextTypes
+from PIL import Image
+import logging
+from asgiref.sync import sync_to_async
+
 # Настройка логгера
 logger = logging.getLogger(__name__)
 
 # Состояния для ConversationHandler
 AWAIT_ORDER_ID = 1
 AWAIT_NEW_STATUS = 2
-
-logger = logging.getLogger(__name__)
 
 # ✅ Перевод статусов заказов
 STATUS_TRANSLATION = {
@@ -32,8 +40,6 @@ STATUS_TRANSLATION = {
     "canceled": "Отменён"
 }
 # from bot.utils.access_control import check_access  # Декоратор для проверки роли
-
-logger = logging.getLogger(__name__)
 
 async def staff_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -74,7 +80,7 @@ async def handle_staff_new_orders(update: Update, context: ContextTypes.DEFAULT_
         logger.info(f"[STAFF] Пользователь {telegram_id} запросил список новых заказов.")
 
         # ✅ Фильтруем только заказы без исполнителя
-        orders = await sync_to_async(lambda: list(Order.objects.filter(status="processing", executor_id__isnull=True)))()
+        orders = await sync_to_async(lambda: list(Order.objects.filter(status="created", executor_id__isnull=True)))()
 
         if not orders:
             logger.warning(f"❌ Нет доступных заказов для пользователя {telegram_id}.")
@@ -209,24 +215,7 @@ async def handle_staff_my_orders(update: Update, context: ContextTypes.DEFAULT_T
         await update.message.reply_text("❌ Произошла ошибка. Попробуйте позже.")
         return ConversationHandler.END
 
-
-# ======= Детали заказа =======
-from django.conf import settings  # ✅ Импортируем MEDIA_ROOT
-from PIL import Image
-import os
-
-# Функция для уменьшения размера изображения перед отправкой
-def resize_image(image_path, max_size=(512, 512)):
-    try:
-        with Image.open(image_path) as img:
-            img.thumbnail(max_size)  # Уменьшение изображения до максимального размера
-            new_path = f"{image_path}_resized.jpg"
-            img.save(new_path, "JPEG")
-            return new_path
-    except Exception as e:
-        logger.error(f"Ошибка при изменении размера изображения {image_path}: {e}")
-        return image_path
-
+# ======= Просмотр деталей заказа =======
 async def handle_staff_order_details(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
@@ -248,7 +237,6 @@ async def handle_staff_order_details(update: Update, context: ContextTypes.DEFAU
         )
         order_items = await sync_to_async(lambda: list(order.items.select_related("product").all()))()
 
-        base_url = "http://127.0.0.1:8000"  # Локальный сервер (заменить на реальный в продакшене)
         details = (
             f"📦 <b>Заказ #{order.id}</b>\n"
             f"👤 <b>Заказчик:</b> {order.user.first_name} {order.user.last_name}\n"
@@ -260,31 +248,16 @@ async def handle_staff_order_details(update: Update, context: ContextTypes.DEFAU
         )
 
         for item in order_items:
-            if item.product.image:
-                image_relative_path = str(item.product.image)  # Убираем двойное media/
-                image_absolute_path = os.path.join(settings.MEDIA_ROOT, image_relative_path)
+            details += f"🔹 {item.product.name} — {item.quantity} шт. по {item.price:.2f} ₽\n"
 
-                # Проверяем, существует ли файл
-                if not os.path.exists(image_absolute_path):
-                    logger.warning(f"❌ Файл изображения не найден: {image_absolute_path}")
-                    continue  # Пропускаем итерацию, если файла нет
+        # Создаем кнопки "Завершить" и "Отменить"
+        keyboard = [
+            [InlineKeyboardButton("✔️ Завершить Заказ", callback_data=f"staff_complete_order:{order.id}")],
+            [InlineKeyboardButton("❌ Отменить Заказ", callback_data=f"staff_cancel_order:{order.id}")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
 
-                try:
-                    resized_image_path = resize_image(image_absolute_path)
-
-                    with open(resized_image_path, "rb") as photo:
-                        await context.bot.send_photo(
-                            chat_id=telegram_id,
-                            photo=photo,
-                            caption=f"🌸 {item.product.name} — {item.quantity} шт. по {item.price:.2f} ₽"
-                        )
-                        logger.info(f"✅ Фото отправлено: {resized_image_path}")
-
-                    if resized_image_path != image_absolute_path:
-                        os.remove(resized_image_path)
-
-                except Exception as e:
-                    logger.error(f"❌ Ошибка при отправке фото {image_absolute_path}: {e}")
+        await query.edit_message_text(details, parse_mode="HTML", reply_markup=reply_markup)
 
     except Order.DoesNotExist:
         await query.edit_message_text("❌ Заказ не найден или уже закрыт.")
@@ -294,27 +267,77 @@ async def handle_staff_order_details(update: Update, context: ContextTypes.DEFAU
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-async def look_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ======= Завершение заказа =======
+async def complete_order_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Обработчик команды /look_help для сотрудника.
+    Завершение заказа по inline-кнопке "Завершить".
     """
-    await update.message.reply_text(
-        "🛠️ Помощь для сотрудников:\n"
-        "📦 /my_orders - Текущие заказы\n"
-        "🔄 /update_status - Обновление статуса заказов\n"
-        "ℹ️ /look_help - Помощь посмотреть"
-    )
+    query = update.callback_query
+    await query.answer()
+    callback_data = query.data
+
+    parts = callback_data.split(":")
+    if len(parts) != 2 or parts[0] != "staff_complete_order":
+        logger.warning(f"❌ Некорректный callback_data: {callback_data}")
+        return
+
+    order_id = int(parts[1])
+    telegram_id = update.effective_user.id
+
+    try:
+        # Проверяем, является ли пользователь исполнителем заказа
+        user = await sync_to_async(CustomUser.objects.get)(telegram_id=telegram_id, is_staff=True)
+        order = await sync_to_async(Order.objects.get)(id=order_id, executor_id=user.id, status="processing")
+
+        # Обновляем статус заказа
+        order.status = "delivered"
+        await sync_to_async(order.save)()
+
+        await query.edit_message_text(f"✅ Заказ #{order.id} успешно завершён.")
+
+        logger.info(f"✅ Заказ #{order.id} завершён пользователем {telegram_id}.")
+
+    except Order.DoesNotExist:
+        logger.error(f"❌ Ошибка: заказ #{order_id} не найден или уже завершён.")
+        await query.edit_message_text("❌ Заказ не найден или уже завершён.")
+
+    except CustomUser.DoesNotExist:
+        logger.error(f"❌ Ошибка: пользователь {telegram_id} не найден или не является сотрудником.")
+        await query.edit_message_text("❌ У вас нет прав для выполнения этого действия.")
+
+    except Exception as e:
+        logger.error(f"❌ Ошибка в complete_order_callback: {e}")
+        await query.edit_message_text("❌ Произошла ошибка. Попробуйте позже.")
+
+
+# ======= Отмена заказа =======
+async def cancel_order_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Отмена заказа по inline-кнопке.
+    """
+    query = update.callback_query
+    await query.answer()
+    callback_data = query.data
+
+    parts = callback_data.split(":")
+    if len(parts) != 2 or parts[0] != "staff_cancel_order":
+        logger.warning(f"❌ Некорректный callback_data: {callback_data}")
+        return
+
+    order_id = int(parts[1])
+
+    try:
+        order = await sync_to_async(Order.objects.get)(id=order_id, status="processing")
+        order.status = "canceled"
+        await sync_to_async(order.save)()
+        await query.edit_message_text(f"❌ Заказ #{order.id} был отменён.")
+
+        logger.info(f"✅ Заказ #{order.id} отменён пользователем {update.effective_user.id}.")
+
+    except Order.DoesNotExist:
+        logger.error(f"❌ Заказ с ID {order_id} не найден или уже отменён.")
+        await query.edit_message_text("⚠️ Заказ не найден или уже отменён.")
+
 
 
 # ======= Уведомления =======
@@ -373,25 +396,9 @@ def send_new_order_notification(order):
 
 
 
-# ======= Завершение заказа =======
-async def complete_order_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Завершение заказа по inline-кнопке.
-    """
-    query = update.callback_query
-    await query.answer()
-    callback_data = query.data
 
-    if callback_data.startswith("complete_order_"):
-        order_id = callback_data.replace("complete_order_", "")
-        try:
-            order = await sync_to_async(Order.objects.get)(id=order_id, status="processing")
-            order.status = "delivered"
-            await sync_to_async(order.save)()
-            await query.edit_message_text(f"✅ Заказ #{order.id} успешно завершён.")
-        except Order.DoesNotExist:
-            logger.error(f"Заказ с ID {order_id} не найден или уже завершён.")
-            await query.edit_message_text("❌ Заказ не найден или уже завершён.")
+
+
 
 
 # ======= Взятие заказа в работу =======
@@ -433,4 +440,20 @@ async def update_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE
     except Exception as e:
         logger.error(f"Ошибка при изменении статуса заказа: {e}", exc_info=True)
         await query.edit_message_text("Произошла ошибка при изменении статуса заказа.")
+
+
+
+# ======= Обработчик команды 'ℹ️ Помощь' =======
+async def handle_staff_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Обработчик текстовой команды 'ℹ️ Помощь' для сотрудников.
+    """
+    await update.message.reply_text(
+        "🛠️ **Помощь для сотрудников:**\n\n"
+        "📦 **Новые заказы** — посмотреть доступные заказы, которые можно взять в работу.\n"
+        "🔄 **Текущие заказы** — список заказов, которые вы выполняете.\n"
+        "❓ **Помощь** — описание доступных команд.",
+        parse_mode="HTML"
+    )
+
 

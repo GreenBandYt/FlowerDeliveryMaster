@@ -24,6 +24,9 @@ from bot.handlers.staff import (
     handle_staff_take_order,
     handle_staff_my_orders,
     handle_staff_order_details,
+    complete_order_callback,
+    cancel_order_callback,
+    handle_staff_help,
     )
 
 
@@ -59,5 +62,10 @@ CALLBACK_ACTIONS = {
     # 🔹 Управление заказами для Сотрудника
     "staff_take_order": handle_staff_take_order,
     "staff_order_details" : handle_staff_order_details,
+    "staff_complete_order": complete_order_callback,  # ✅ Завершение заказа
+    "staff_cancel_order": cancel_order_callback,  # ❌ Отмена заказа
+    "staff_help": handle_staff_help,
+
+
 }
 

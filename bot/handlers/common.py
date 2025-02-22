@@ -34,6 +34,9 @@ from bot.handlers.staff import (staff_start,
     handle_staff_new_orders,
     handle_staff_take_order,
     handle_staff_my_orders,
+    complete_order_callback,
+    cancel_order_callback,
+    handle_staff_help,
     )
 
 from bot.handlers.customer import customer_start
