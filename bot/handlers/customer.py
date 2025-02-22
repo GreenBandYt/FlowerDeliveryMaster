@@ -435,7 +435,7 @@ async def checkout(update: Update, context: CallbackContext):
             # Создаём заказ с указанной стоимостью
             order = Order.objects.create(
                 user=cart.user,
-                status="Новый",
+                status="created",
                 total_price=total_price  # Указываем вычисленное значение
             )
 

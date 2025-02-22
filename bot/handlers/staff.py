@@ -1,3 +1,5 @@
+# bot/handlers/staff.py
+
 import os
 from PIL import Image
 from telegram.constants import ParseMode  # Для HTML-разметки сообщений
@@ -177,7 +179,7 @@ async def complete_order_callback(update: Update, context: ContextTypes.DEFAULT_
         order_id = callback_data.replace("complete_order_", "")
         try:
             order = await sync_to_async(Order.objects.get)(id=order_id, status="processing")
-            order.status = "completed"
+            order.status = "delivered"
             await sync_to_async(order.save)()
             await query.edit_message_text(f"✅ Заказ #{order.id} успешно завершён.")
         except Order.DoesNotExist:
@@ -213,7 +215,7 @@ async def update_order_status(update: Update, context: ContextTypes.DEFAULT_TYPE
     await query.answer()
     try:
         _, order_id, new_status = query.data.split("_")
-        if new_status not in ["processing", "completed", "canceled"]:
+        if new_status not in ["processing", "delivered", "canceled"]:
             raise ValueError("Недопустимый статус заказа.")
         order = await sync_to_async(Order.objects.get)(id=order_id)
         order.status = new_status

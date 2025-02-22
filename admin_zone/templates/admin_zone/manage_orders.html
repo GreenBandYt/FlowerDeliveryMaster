@@ -53,18 +53,18 @@
                         <span class="badge {% if order.status == 'Выполнено' %}bg-success{% elif order.status == 'Отменено' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
                             {{ order.status }}
                         </span>
-                    </td>
-                    <td>
-                        <form method="post" action="{% url 'admin_zone:update_order_status' order.id %}">
-                            {% csrf_token %}
-                            <select name="status" class="form-select form-select-sm">
-                                <option value="В обработке" {% if order.status == 'В обработке' %}selected{% endif %}>В обработке</option>
-                                <option value="Выполнено" {% if order.status == 'Выполнено' %}selected{% endif %}>Выполнено</option>
-                                <option value="Отменено" {% if order.status == 'Отменено' %}selected{% endif %}>Отменено</option>
-                            </select>
-                            <button type="submit" class="btn btn-sm btn-primary mt-1">Изменить</button>
-                        </form>
-                    </td>
+<td>
+    <form method="post" action="{% url 'admin_zone:update_order_status' order.id %}">
+        {% csrf_token %}
+        <select name="status" class="form-select form-select-sm">
+            <option value="processing" {% if order.status == 'processing' %}selected{% endif %}>В обработке</option>
+            <option value="delivered" {% if order.status == 'delivered' %}selected{% endif %}>Выполнено</option>
+            <option value="canceled" {% if order.status == 'canceled' %}selected{% endif %}>Отменено</option>
+        </select>
+        <button type="submit" class="btn btn-sm btn-primary mt-1">Изменить</button>
+    </form>
+</td>
+
                 </tr>
                 {% endfor %}
             </tbody>

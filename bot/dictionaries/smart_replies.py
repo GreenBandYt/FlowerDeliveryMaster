@@ -1,3 +1,5 @@
+# bot/dictionaries/smart_replies.py
+
 import re
 
 # Словарь умных ответов
