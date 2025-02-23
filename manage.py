@@ -9,6 +9,8 @@ import logging
 from multiprocessing import Process
 import django
 import psutil
+import asyncio
+
 
 # Настройка логирования
 logging.basicConfig(
@@ -79,13 +81,28 @@ def run_server():
     execute_from_command_line(["manage.py", "runserver"])
 
 
+def run_notifications():
+    """Функция для запуска системы уведомлений."""
+    try:
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "flowerdelivery.settings")
+        django.setup()
+        from bot.notification.notification_worker import notification_worker
+        asyncio.run(notification_worker())
+
+    except Exception as e:
+        logging.error(f"Ошибка при запуске системы уведомлений: {e}", exc_info=True)
+
+
+
+
 def main():
     """Главная функция."""
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "flowerdelivery.settings")
+
     if "runserver" in sys.argv:
         # Проверяем, что это основной процесс
         if os.environ.get('RUN_MAIN') == 'true':
-            logging.info("Это перезапуск сервера Django. Логика запуска бота пропущена.")
+            logging.info("Это перезапуск сервера Django. Логика запуска бота и уведомлений пропущена.")
             run_server()
             return
 
@@ -95,10 +112,19 @@ def main():
 
         # Ждём готовности сервера
         if wait_for_server("http://127.0.0.1:8000"):
-            logging.info("Сервер готов. Запускаем Telegram-бота.")
+            logging.info("Сервер готов. Запускаем Telegram-бота и систему уведомлений.")
+
+            # Запускаем бота в отдельном процессе
             bot_process = Process(target=run_bot)
             bot_process.start()
+
+            # Запускаем систему уведомлений в отдельном процессе
+            notification_process = Process(target=run_notifications)
+            notification_process.start()
+
+            # Ожидаем завершения процессов
             bot_process.join()
+            notification_process.join()
         else:
             logging.error("Сервер не запустился. Завершаем работу.")
             server_process.terminate()
@@ -106,6 +132,7 @@ def main():
     else:
         from django.core.management import execute_from_command_line
         execute_from_command_line(sys.argv)
+
 
 
 if __name__ == "__main__":

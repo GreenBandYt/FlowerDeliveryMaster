@@ -39,15 +39,46 @@ from bot.handlers.staff import (staff_start,
     handle_staff_help,
     )
 
-from bot.handlers.customer import customer_start
+from bot.handlers.customer import (
+    customer_start,
+    handle_customer_help,
+    handle_customer_catalog,
+    customer_add_to_cart,
+    customer_view_cart,
+    customer_decrease_quantity,
+    customer_increase_quantity,
+    customer_remove_from_cart,
+    customer_view_checkout,
+    customer_confirm_checkout,
+    customer_cancel_order,
+    customer_view_orders,
+    customer_repeat_order,
+    )
 
-from bot.handlers.new_user import new_user_start
+from bot.handlers.new_user import (
+    new_user_start,
+    handle_new_user_help,
+    handle_new_user_link_start,
+    handle_new_user_link_input,
+    handle_new_user_get_username,
+    handle_new_user_get_password,
+    handle_new_user_get_phone,
+    handle_new_user_get_address,
+
+    )
+
 from bot.utils.access_control import check_access
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+STATE_HANDLERS = {
+    "USERNAME": handle_new_user_get_username,
+    "PASSWORD": handle_new_user_get_password,
+    "PHONE": handle_new_user_get_phone,
+    "ADDRESS": handle_new_user_get_address,
+}
 
 # ======== Обработчик команды /start ========
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -87,15 +118,28 @@ async def handle_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text.strip()
     telegram_id = update.effective_user.id
 
-    # ✅ Проверяем, ждёт ли бот ввод ID пользователя
+    # ✅ Если бот ждёт ввод ID пользователя
     if context.user_data.get("state") == "AWAIT_USER_ID":
         logger.info(f"📥 Передаём в handle_user_status_update_request: {user_text}")
         await handle_user_status_update_request(update, context)
-        return  # Выходим, чтобы не передавать текст дальше
+        return
+
+    # ✅ Если бот ждёт ввод логина для привязки аккаунта
+    if context.user_data.get("state") == "AWAIT_LINK":
+        logger.info(f"📥 Передаём в handle_new_user_link_input: {user_text}")
+        await handle_new_user_link_input(update, context)
+        return
+
+    # ✅ Если бот находится в одном из шагов регистрации
+    if context.user_data.get("state") in STATE_HANDLERS:
+        current_state = context.user_data.get("state")
+        logger.info(f"📥 Обработка регистрации: состояние {current_state} для пользователя {telegram_id}")
+        await STATE_HANDLERS[current_state](update, context)
+        return
 
     logger.info(f"📨 Текст от {telegram_id}: {user_text}")
 
-    # Проверяем роль пользователя (кеширование для оптимизации)
+    # Проверяем роль пользователя (с кешированием для оптимизации)
     role = cache.get(f"user_role_{telegram_id}")
     if not role:
         user = await sync_to_async(CustomUser.objects.filter(telegram_id=telegram_id).first)()
@@ -107,25 +151,26 @@ async def handle_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     logger.info(f"🔍 Определена роль: {role}")
 
-    # ✅ Проверяем, есть ли команда в TEXT_ACTIONS
+    # ✅ Если текст совпадает с командой в TEXT_ACTIONS
     action = TEXT_ACTIONS.get(user_text)
     if action:
         logger.info(f"✅ Найден обработчик текста: {action.__name__} для команды '{user_text}'")
         await action(update, context)
         return
 
-    # ✅ Если команда не найдена, ищем ответ в словаре умных ответов
+    # ✅ Если команда не найдена, ищем умный ответ
     smart_reply = get_smart_reply(user_text)
-    if smart_reply != TEXT_RESPONSES["default"]:  # Если есть осмысленный ответ
+    if smart_reply != TEXT_RESPONSES["default"]:
         logger.info(f"🤖 Умный ответ: {smart_reply}")
         await update.message.reply_text(smart_reply)
         return
 
-    # ✅ Если ничего не найдено - отправляем стандартное сообщение
+    # ✅ Если ничего не найдено – отправляем стандартное сообщение
     logger.warning(f"⚠️ Неизвестная команда: '{user_text}' от {telegram_id}")
     await update.message.reply_text(
         "Извините, я вас не понял. Попробуйте уточнить запрос или воспользуйтесь кнопками меню. 🤔"
     )
+
 
 # ======== Универсальный обработчик inline-кнопок ========
 async def handle_inline_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):

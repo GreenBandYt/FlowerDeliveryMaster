@@ -12,73 +12,118 @@ import logging
 from users.models import CustomUser
 from bot.keyboards.customer_keyboards import customer_keyboard
 # from bot.handlers.customer import view_orders, view_cart, view_catalog, help
-
 # from bot.handlers.admin import analytics, manage_users, orders
+
+from telegram.constants import ParseMode
+from PIL import Image
+from textwrap import shorten
+from bot.utils.time_utils import is_working_hours
+
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
 
-
 async def customer_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Приветствие клиента.
+    Устанавливает состояние 'customer_start' и роль 'customer', затем отправляет сообщение с клавиатурой.
     """
-    user = await sync_to_async(CustomUser.objects.get)(telegram_id=update.effective_user.id)
+    telegram_id = update.effective_user.id
+    logger.info(f"[CUSTOMER_START] Запуск для пользователя {telegram_id}")
+
+    # Устанавливаем роль и состояние клиента
+    context.user_data["role"] = "customer"
+    context.user_data["state"] = "customer_start"
+
+    # Получаем пользователя из базы
+    user = await sync_to_async(CustomUser.objects.filter(telegram_id=telegram_id).first)()
+
+    if not user:
+        logger.error(f"[CUSTOMER_START ERROR] Пользователь {telegram_id} не найден в БД!")
+        await update.message.reply_text("❌ Ошибка: Ваш аккаунт не найден. Попробуйте снова или обратитесь в поддержку.")
+        return
+
+    # Отправляем сообщение с клавиатурой
     await update.message.reply_text(
-        f"🌸 Здравствуйте, {user.username} (Клиент)!\n"
-        "🎉 Доступные команды:\n"
-        "📦 /view_orders - Мои заказы\n"
-        "🛒 /view_cart - Корзина\n"
-        "🛍️ /view_catalog - Каталог\n"
-        "ℹ️ /show_help - Помощь показать",
+        f"🌸 Здравствуйте, {user.username}!\n"
+        "🎉 Доступные функции:\n"
+        "📦 Мои заказы\n"
+        "🛒 Корзина\n"
+        "🛍️ Каталог\n"
+        "ℹ️ Показать помощь",
         reply_markup=customer_keyboard
     )
 
-async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info("Command /show_help invoked by user ID: %s", update.effective_user.id)
+    logger.info(f"[CUSTOMER_START] Приветственное сообщение отправлено пользователю {telegram_id}")
+
+async def handle_customer_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Вывод справочной информации для клиента.
+    """
+    telegram_id = update.effective_user.id
+    logger.info(f"[CUSTOMER_HELP] Пользователь {telegram_id} запросил помощь.")
+
     await update.message.reply_text(
-        "🌸 Клиентская помощь:\n"
-        "📦 /view_orders - Мои заказы\n"
-        "🛒 /view_cart - Корзина\n"
-        "🛍️ /view_catalog - Каталог\n"
-        "ℹ️ /show_help - Показать помощь"
+        "ℹ️ *Клиентская помощь:*\n\n"
+        "📦 *Мои заказы* - Посмотреть текущие и завершённые заказы.\n"
+        "🛒 *Корзина* - Проверить товары перед оформлением.\n"
+        "🛍️ *Каталог* - Выбрать цветы и букеты для заказа.\n"
+        "ℹ️ *Показать помощь* - Показать данный текст!",
+        parse_mode="Markdown"
     )
 
 
 # ======= Просмотр каталога товаров =======
-async def view_catalog(update: Update, context: CallbackContext):
+# Функция уменьшения изображения
+def customer_resize_image(image_path, max_size=(512, 512)):
+    """
+    Уменьшает изображение до max_size и сохраняет в /tmp/, чтобы не изменять оригинальный файл.
+    """
+    try:
+        with Image.open(image_path) as img:
+            img.thumbnail(max_size)
+
+            # Создаём временный файл в /tmp/
+            resized_path = f"/tmp/{os.path.basename(image_path)}_resized.jpg"
+            img.save(resized_path, "JPEG")
+
+            return resized_path
+    except Exception as e:
+        logger.error(f"❌ Ошибка при обработке изображения {image_path}: {e}")
+        return image_path  # Возвращаем оригинальный путь, если уменьшение не удалось
+
+async def handle_customer_catalog(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Отображение списка товаров с инлайн-кнопками для добавления в корзину.
     """
-    user = update.effective_user
+    telegram_id = update.effective_user.id
+    logger.info(f"[CUSTOMER_CATALOG] Пользователь {telegram_id} запросил каталог товаров.")
 
     try:
-        logger.info(f"Пользователь {user.username} ({user.id}) вызвал команду /view_catalog")
-
-        # Получаем список товаров из базы данных
+        # Получаем список товаров из базы
         products = await sync_to_async(lambda: list(Product.objects.all()))()
+
         if not products:
-            await update.message.reply_text("Каталог пуст.")
+            await update.message.reply_text("📭 Каталог пока пуст. Загляните позже!")
             return
 
-        # Формируем сообщение с товарами и инлайн-кнопками
+        # Обрабатываем товары один за другим
         for product in products:
-            text = (f"Предложение: {product.id}\n"
-                    f"\U0001F4E6 {product.name}\n"
-                    f"\U0001F4B0 Цена: {product.price:.2f} руб.\n"
-                    f"\u2139\ufe0f {product.description}")
+            text = (
+                f"📦 *{product.name}*\n"
+                f"💰 Цена: *{product.price:.2f}* руб.\n"
+                f"ℹ️ {product.description}"
+            )
 
-            # Путь к файлу изображения
+            # Проверяем изображение
             image_path = os.path.join("media", str(product.image))
 
-            # Проверяем, существует ли файл изображения
             if os.path.exists(image_path):
-                # Ограничиваем размер изображения
-                resized_image_path = resize_image(image_path)
+                resized_image_path = customer_resize_image(image_path)
 
                 # Формируем инлайн-кнопку для добавления в корзину
                 keyboard = [[InlineKeyboardButton(
-                    "Добавить в корзину",
+                    "➕ Добавить в корзину",
                     callback_data=f"add_to_cart_{product.id}"
                 )]]
                 reply_markup = InlineKeyboardMarkup(keyboard)
@@ -88,36 +133,24 @@ async def view_catalog(update: Update, context: CallbackContext):
                     chat_id=update.message.chat_id,
                     photo=open(resized_image_path, "rb"),
                     caption=text,
-                    parse_mode=ParseMode.HTML,
+                    parse_mode=ParseMode.MARKDOWN,
                     reply_markup=reply_markup
                 )
 
-                # Удаляем временный уменьшенный файл
-                if resized_image_path != image_path:
+                # Удаляем временный уменьшенный файл, если он создавался
+                if resized_image_path.startswith("/tmp/") and os.path.exists(resized_image_path):
                     os.remove(resized_image_path)
             else:
-                logger.warning(f"Файл изображения {image_path} не найден.")
-                await update.message.reply_text(f"{text}\n\nИзображение недоступно.")
+                logger.warning(f"[CUSTOMER_CATALOG] Изображение {image_path} не найдено.")
+                await update.message.reply_text(f"{text}\n\n❌ *Изображение недоступно.*", parse_mode=ParseMode.MARKDOWN)
 
     except Exception as e:
-        logger.exception(f"Ошибка при отображении каталога для пользователя {user.username} ({user.id}): {e}")
-        await update.message.reply_text("Произошла ошибка при загрузке каталога.")
+        logger.exception(f"[CUSTOMER_CATALOG] Ошибка при загрузке каталога для пользователя {telegram_id}: {e}")
+        await update.message.reply_text("⚠️ Произошла ошибка при загрузке каталога. Попробуйте позже.")
 
-
-# Функция для уменьшения размера изображения
-def resize_image(image_path, max_size=(512, 512)):
-    try:
-        with Image.open(image_path) as img:
-            img.thumbnail(max_size)  # Уменьшение изображения до максимального размера
-            new_path = f"{image_path}_resized.jpg"
-            img.save(new_path, "JPEG")
-            return new_path
-    except Exception as e:
-        logger.error(f"Ошибка при изменении размера изображения {image_path}: {e}")
-        return image_path
 
 # ======= Обработка добавления товара в корзину =======
-async def add_to_cart(update: Update, context: CallbackContext):
+async def customer_add_to_cart(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Добавление товара в корзину пользователя по callback-запросу.
     """
@@ -128,244 +161,70 @@ async def add_to_cart(update: Update, context: CallbackContext):
         await query.answer()
         product_id = int(query.data.split('_')[-1])
 
+        # Получаем пользователя
+        db_user = await sync_to_async(CustomUser.objects.get)(telegram_id=user.id)
+
         # Получаем товар из базы данных
         product = await sync_to_async(Product.objects.get)(id=product_id)
 
         # Получаем или создаем корзину пользователя
-        cart, _ = await sync_to_async(Cart.objects.get_or_create)(user__telegram_id=user.id)
+        cart, _ = await sync_to_async(Cart.objects.get_or_create)(user=db_user)
 
         # Проверяем, есть ли товар уже в корзине
         cart_item, created = await sync_to_async(CartItem.objects.get_or_create)(
             cart=cart, product=product,
             defaults={"quantity": 1, "price": product.price}
         )
+
         if not created:
+            # Ограничиваем количество товара (например, максимум 10 шт.)
+            if cart_item.quantity >= 10:
+                await query.message.reply_text("⚠️ Максимальное количество этого товара уже в корзине!")
+                return
+
             cart_item.quantity += 1
             cart_item.price = cart_item.quantity * product.price
             await sync_to_async(cart_item.save)()
 
         logger.info(f"Товар {product.name} добавлен в корзину пользователя {user.username} ({user.id}).")
-        await query.edit_message_reply_markup(reply_markup=None)
+
+        # Обновляем inline-кнопку
+        keyboard = [[InlineKeyboardButton("✅ Уже в корзине", callback_data="none")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await query.edit_message_reply_markup(reply_markup=reply_markup)
         await query.message.reply_text(f"\U0001F4E6 Товар '{product.name}' добавлен в вашу корзину!")
 
+    except CustomUser.DoesNotExist:
+        logger.error(f"❌ Пользователь с ID {user.id} не найден в БД.")
+        await query.message.reply_text("⚠️ Ошибка: пользователь не найден.")
     except Product.DoesNotExist:
-        logger.error(f"Товар с ID {product_id} не найден.")
-        await query.message.reply_text("Ошибка: товар не найден.")
+        logger.error(f"❌ Товар с ID {product_id} не найден.")
+        await query.message.reply_text("⚠️ Ошибка: товар не найден.")
     except Exception as e:
-        logger.exception(f"Ошибка при добавлении товара в корзину: {e}")
-        await query.message.reply_text("Произошла ошибка при добавлении товара в корзину.")
+        logger.exception(f"❌ Ошибка при добавлении товара в корзину: {e}")
+        await query.message.reply_text("⚠️ Произошла ошибка при добавлении товара в корзину.")
 
-async def decrease_quantity(update: Update, context: CallbackContext):
-    """
-    Уменьшение количества товара в корзине.
-    """
-    query = update.callback_query
-    user = update.effective_user
-
-    try:
-        product_id = int(query.data.split("_")[1])
-        cart_item = await sync_to_async(
-            lambda: CartItem.objects.filter(cart__user__telegram_id=user.id, product_id=product_id).first()
-        )()
-
-        if not cart_item:
-            await query.answer("❌ Товар не найден в вашей корзине.")
-            return
-
-        if cart_item.quantity > 1:
-            cart_item.quantity -= 1
-            cart_item.price = cart_item.quantity * await sync_to_async(lambda: cart_item.product.price)()
-            await sync_to_async(cart_item.save)()
-            await query.answer(f"Количество товара уменьшено до {cart_item.quantity}.")
-        else:
-            await query.answer("❌ Невозможно уменьшить количество ниже 1.")
-
-        # Обновляем корзину
-        await view_cart(update, context)
-
-    except Exception as e:
-        logger.exception(f"Ошибка при уменьшении количества товара: {e}")
-        await query.answer("❌ Произошла ошибка при изменении количества.")
-
-
-
-# Увеличение количества товара
-async def increase_quantity(update: Update, context: CallbackContext):
-    query = update.callback_query
-    user = query.from_user
-    product_id = int(query.data.split('_')[-1])
-
-    try:
-        await query.answer()
-
-        # Получаем товар в корзине
-        cart_item = await sync_to_async(CartItem.objects.select_related('product').get)(
-            cart__user__telegram_id=user.id, product_id=product_id
-        )
-
-        # Увеличиваем количество
-        cart_item.quantity += 1
-        cart_item.price = cart_item.quantity * await sync_to_async(lambda: cart_item.product.price)()
-        await sync_to_async(cart_item.save)()
-
-        await query.message.reply_text(
-            f"🔼 Количество товара '{cart_item.product.name}' увеличено до {cart_item.quantity}."
-        )
-        # Обновляем корзину
-        await view_cart(update, context)
-
-
-    except CartItem.DoesNotExist:
-        await query.message.reply_text("⚠️ Товар не найден в вашей корзине.")
-    except Exception as e:
-        logger.exception(f"Ошибка при увеличении количества товара {product_id}: {e}")
-        await query.message.reply_text("❌ Произошла ошибка при увеличении количества товара.")
-
-
-async def delete_item(update: Update, context: CallbackContext):
-    """
-    Удаление товара из корзины.
-    """
-    query = update.callback_query
-    user = update.effective_user
-
-    try:
-        product_id = int(query.data.split("_")[1])
-        cart_item = await sync_to_async(
-            lambda: CartItem.objects.filter(cart__user__telegram_id=user.id, product_id=product_id).first()
-        )()
-
-        if not cart_item:
-            await query.answer("❌ Товар не найден в вашей корзине.")
-            return
-
-        product_name = await sync_to_async(lambda: cart_item.product.name)()
-        await sync_to_async(cart_item.delete)()
-        await query.answer(f"Товар '{product_name}' удален из корзины.")
-
-        # Обновляем корзину
-        await view_cart(update, context)
-
-    except Exception as e:
-        logger.exception(f"Ошибка при удалении товара: {e}")
-        await query.answer("❌ Произошла ошибка при удалении товара.")
-
-
-
-
-async def remove_from_cart(update: Update, context: CallbackContext):
-    """
-    Удаление товара из корзины пользователя по callback-запросу.
-    """
-    query = update.callback_query
-    user = query.from_user
-
-    try:
-        await query.answer()
-        product_id = int(query.data.split('_')[-1])
-
-        # Получаем корзину пользователя
-        cart = await sync_to_async(Cart.objects.get)(user__telegram_id=user.id)
-
-        # Получаем товар в корзине
-        cart_item = await sync_to_async(CartItem.objects.get)(cart=cart, product_id=product_id)
-
-        # Уменьшаем количество товара или удаляем из корзины
-        if cart_item.quantity > 1:
-            cart_item.quantity -= 1
-            cart_item.price = cart_item.quantity * cart_item.product.price
-            await sync_to_async(cart_item.save)()
-        else:
-            await sync_to_async(cart_item.delete)()
-
-        logger.info(f"Товар с ID {product_id} удалён из корзины пользователя {user.username} ({user.id}).")
-        await query.edit_message_reply_markup(reply_markup=None)
-        await query.message.reply_text("\U0001F6AE Товар удалён из вашей корзины.")
-
-    except Cart.DoesNotExist:
-        logger.error(f"Корзина пользователя {user.username} ({user.id}) не найдена.")
-        await query.message.reply_text("Ошибка: корзина не найдена.")
-    except CartItem.DoesNotExist:
-        logger.error(f"Товар с ID {product_id} отсутствует в корзине пользователя {user.username} ({user.id}).")
-        await query.message.reply_text("Ошибка: товар не найден в вашей корзине.")
-    except Exception as e:
-        logger.exception(f"Ошибка при удалении товара из корзины: {e}")
-        await query.message.reply_text("Произошла ошибка при удалении товара из корзины.")
-
-
-async def confirm_checkout(update: Update, context: CallbackContext):
-    """
-    Подтверждение оформления заказа из корзины.
-    """
-    query = update.callback_query
-    user = query.from_user
-
-    try:
-        await query.answer()
-
-        # Получаем корзину пользователя
-        cart = await sync_to_async(Cart.objects.get)(user__telegram_id=user.id)
-
-        # Проверяем, есть ли товары в корзине
-        if not cart.items.exists():
-            await query.message.reply_text("\U0001F6D2 Ваша корзина пуста.")
-            return
-
-        # Создаем заказ на основе корзины
-        order = await sync_to_async(Order.objects.create)(
-            user=cart.user,
-            total_price=sum(item.price for item in cart.items.all())
-        )
-        for item in cart.items.all():
-            await sync_to_async(order.items.create)(
-                product=item.product,
-                quantity=item.quantity,
-                price=item.price
-            )
-        await sync_to_async(cart.items.all().delete)()  # Очищаем корзину
-
-        logger.info(f"Пользователь {user.username} ({user.id}) оформил заказ {order.id}.")
-        await query.edit_message_reply_markup(reply_markup=None)
-        await query.message.reply_text("\U0001F4E6 Ваш заказ успешно оформлен!")
-
-    except Cart.DoesNotExist:
-        logger.error(f"Корзина пользователя {user.username} ({user.id}) не найдена.")
-        await query.message.reply_text("Ошибка: корзина не найдена.")
-    except Exception as e:
-        logger.exception(f"Ошибка при подтверждении оформления заказа: {e}")
-        await query.message.reply_text("Произошла ошибка при оформлении заказа.")
-
-async def cancel_checkout(update: Update, context: CallbackContext):
-    """
-    Отмена оформления заказа.
-    """
-    query = update.callback_query
-    user = query.from_user
-
-    try:
-        await query.answer()
-
-        logger.info(f"Пользователь {user.username} ({user.id}) отменил оформление заказа.")
-        await query.edit_message_reply_markup(reply_markup=None)
-        await query.message.reply_text("\U0001F6AB Оформление заказа отменено. Вы можете продолжить покупки.")
-
-    except Exception as e:
-        logger.exception(f"Ошибка при отмене оформления заказа: {e}")
-        await query.message.reply_text("Произошла ошибка при отмене оформления заказа.")
 
 
 # ======= Просмотр корзины =======
-async def view_cart(update: Update, context: CallbackContext):
+async def customer_view_cart(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Отображение содержимого корзины пользователя с кнопками управления.
+    Отображение содержимого корзины в формате карточек (без фото) с проверкой рабочего времени.
     """
     user = update.effective_user
     message = update.callback_query.message if update.callback_query else update.message
 
     try:
-        logger.info(f"Пользователь {user.username} ({user.id}) вызвал команду /view_cart")
+        logger.info(f"🛒 Пользователь {user.username} ({user.id}) открыл корзину.")
 
-        # Получаем корзину пользователя
+        # Проверяем, есть ли корзина у пользователя
+        cart_exists = await sync_to_async(Cart.objects.filter(user__telegram_id=user.id).exists)()
+        if not cart_exists:
+            await message.reply_text("🛒 Ваша корзина пуста.")
+            return
+
+        # Получаем содержимое корзины
         cart_items = await sync_to_async(
             lambda: list(CartItem.objects.filter(cart__user__telegram_id=user.id).select_related('product'))
         )()
@@ -374,44 +233,216 @@ async def view_cart(update: Update, context: CallbackContext):
             await message.reply_text("🛒 Ваша корзина пуста.")
             return
 
-        # Формируем сообщение с содержимым корзины
         total_price = 0
-        text = "🛒 <b>Ваша корзина:</b>\n\n"
-        keyboard = []
 
         for item in cart_items:
-            product_name = item.product.name
+            product = item.product
             total_price += item.price
-            text += (
-                f"📦 {product_name}\n"
-                f"Количество: {item.quantity}\n"
-                f"Цена: {item.price} ₽\n\n"
+
+            text = (
+                f"📦 <b>{product.name}</b>\n"
+                f"Количество: <b>{item.quantity}</b>\n"
+                f"Цена: <b>{item.price} ₽</b>"
             )
 
             # Кнопки управления товаром
-            keyboard.append([
-                InlineKeyboardButton("➖", callback_data=f"decrease_{item.product.id}"),
-                InlineKeyboardButton("➕", callback_data=f"increase_{item.product.id}"),
-                InlineKeyboardButton("❌ Удалить", callback_data=f"delete_{item.product.id}")
-            ])
+            keyboard = [
+                [
+                    InlineKeyboardButton("➖", callback_data=f"decrease_{product.id}"),
+                    InlineKeyboardButton(f"{item.quantity} шт.", callback_data="ignore"),
+                    InlineKeyboardButton("➕", callback_data=f"increase_{product.id}")
+                ],
+                [InlineKeyboardButton("❌ Удалить", callback_data=f"remove_from_cart_{product.id}")]
+            ]
 
-        text += f"💰 <b>Итого: {total_price} ₽</b>"
+            reply_markup = InlineKeyboardMarkup(keyboard)
 
-        # Кнопка оформления заказа
-        keyboard.append([InlineKeyboardButton("📝 Оформить заказ", callback_data="checkout")])
-        reply_markup = InlineKeyboardMarkup(keyboard)
+            # Отправляем карточку товара (без фото)
+            await message.reply_text(text, parse_mode="HTML", reply_markup=reply_markup)
 
-        await message.reply_text(text, reply_markup=reply_markup, parse_mode="HTML")
+        # Проверяем рабочее время
+        is_working_time = await sync_to_async(is_working_hours)()
+
+
+        # Если сейчас рабочее время, показываем кнопку оформления заказа
+        if is_working_time:
+            checkout_markup = InlineKeyboardMarkup([[InlineKeyboardButton("📝 Оформить заказ", callback_data="checkout")]])
+            await message.reply_text(f"💰 <b>Итого: {total_price} ₽</b>", parse_mode="HTML", reply_markup=checkout_markup)
+        else:
+            await message.reply_text(f"💰 <b>Итого: {total_price} ₽</b>\n\n❌ Сейчас нерабочее время. Заказы принимаются с 09:00 до 18:00.", parse_mode="HTML")
 
     except Exception as e:
-        logger.exception(f"Ошибка при просмотре корзины: {e}")
+        logger.exception(f"❌ Ошибка при просмотре корзины: {e}")
         await message.reply_text("❌ Произошла ошибка при загрузке корзины.")
 
-
-# ======= Оформление заказа =======
-async def checkout(update: Update, context: CallbackContext):
+# ======= Уменьшение количества товара в корзине =======
+async def customer_decrease_quantity(update: Update, context: CallbackContext):
     """
-    Оформление заказа из корзины пользователя.
+    Уменьшение количества товара в корзине.
+    """
+    query = update.callback_query
+    user = update.effective_user
+
+    try:
+        product_id = int(query.data.split("_")[1])
+
+        # Получаем запись товара в корзине
+        cart_item = await sync_to_async(
+            lambda: CartItem.objects.filter(cart__user__telegram_id=user.id, product_id=product_id).select_related('product').first()
+        )()
+
+        if not cart_item:
+            await query.answer("❌ Товар не найден в вашей корзине.")
+            return
+
+        if cart_item.quantity > 1:
+            cart_item.quantity -= 1
+            cart_item.price = cart_item.quantity * cart_item.product.price  # Нет необходимости использовать sync_to_async
+            await sync_to_async(cart_item.save)()
+            await query.answer(f"✅ Количество товара уменьшено до {cart_item.quantity}.")
+        else:
+            await query.answer("❌ Невозможно уменьшить количество ниже 1.")
+
+        # Обновляем корзину
+        await customer_view_cart(update, context)
+
+    except Exception as e:
+        logger.exception(f"❌ Ошибка при уменьшении количества товара: {e}")
+        await query.answer("❌ Произошла ошибка при изменении количества.")
+
+# ======= Увеличение количества товара в корзине =======
+async def customer_increase_quantity(update: Update, context: CallbackContext):
+    """
+    Увеличение количества товара в корзине.
+    """
+    query = update.callback_query
+    user = query.from_user
+
+    try:
+        product_id = int(query.data.split("_")[-1])
+
+        # Получаем товар в корзине
+        cart_item = await sync_to_async(
+            lambda: CartItem.objects.filter(cart__user__telegram_id=user.id, product_id=product_id).select_related(
+                'product').first()
+        )()
+
+        if not cart_item:
+            await query.answer("⚠️ Товар не найден в вашей корзине.")
+            return
+
+        # Увеличиваем количество
+        cart_item.quantity += 1
+        cart_item.price = cart_item.quantity * cart_item.product.price  # Без использования sync_to_async
+        await sync_to_async(cart_item.save)()
+
+        await query.answer(f"✅ Количество товара '{cart_item.product.name}' увеличено до {cart_item.quantity}.")
+
+        # Обновляем корзину
+        await customer_view_cart(update, context)
+
+    except Exception as e:
+        logger.exception(f"❌ Ошибка при увеличении количества товара {product_id}: {e}")
+        await query.answer("❌ Произошла ошибка при увеличении количества товара.")
+
+# ======= Удаление товара из корзины =======
+async def customer_remove_from_cart(update: Update, context: CallbackContext):
+    """
+    Удаление товара из корзины пользователя по callback-запросу.
+    """
+    query = update.callback_query
+    user = query.from_user
+
+    try:
+        product_id = int(query.data.split("_")[-1])
+
+        # Получаем товар в корзине
+        cart_item = await sync_to_async(
+            lambda: CartItem.objects.filter(cart__user__telegram_id=user.id, product_id=product_id).select_related('product').first()
+        )()
+
+        if not cart_item:
+            await query.answer("❌ Товар не найден в вашей корзине.")
+            return
+
+        product_name = await sync_to_async(lambda: cart_item.product.name)()  # Получаем название товара перед удалением
+
+        await sync_to_async(cart_item.delete)()
+        await query.answer(f"✅ Товар '{product_name}' удалён из корзины.")
+
+        # Обновляем корзину
+        await customer_view_cart(update, context)
+
+    except Exception as e:
+        logger.exception(f"Ошибка при удалении товара: {e}")
+        await query.answer("❌ Произошла ошибка при удалении товара.")
+
+# ======= Вывод заказа для подтверждения оформления =======
+async def customer_view_checkout(update: Update, context: CallbackContext):
+    """
+    Функция вывода заказа для подтверждения оформления:
+    - Проверка рабочего времени
+    - Вывод информации
+    - Кнопки "Подтвердить", "Отменить", "Выход"
+    """
+    query = update.callback_query
+    user = update.effective_user
+
+    try:
+        await query.answer()
+
+        # ✅ Проверяем рабочее время ТОЧНО КАК В `customer_view_cart`
+        is_working_time = await sync_to_async(is_working_hours)()
+        if not is_working_time:
+            await query.message.reply_text("⏳ Сейчас нерабочее время. Заказы принимаются с 09:00 до 18:00.")
+            return
+
+        # ✅ Получаем пользователя
+        db_user = await sync_to_async(lambda: CustomUser.objects.get(telegram_id=user.id))()
+
+        # ✅ Получаем корзину (через `sync_to_async`)
+        cart_items = await sync_to_async(lambda: list(
+            CartItem.objects.filter(cart__user=db_user).select_related('product').all()
+        ))()
+
+        if not cart_items:
+            await query.message.reply_text("🛒 Ваша корзина пуста.")
+            return
+
+        # ✅ Считаем итоговую сумму
+        total_price = sum(item.price * item.quantity for item in cart_items)
+
+        # ✅ Формируем список товаров
+        items_text = "\n".join(
+            [f"📦 {item.product.name} - {item.quantity} шт." for item in cart_items]
+        )
+
+        # ✅ Выводим информацию пользователю
+        message_text = (
+            f"📝 Оформление заказа:\n\n"
+            f"👤 Покупатель: {db_user.username}\n"
+            f"📞 Телефон: {db_user.phone_number}\n"
+            f"📍 Адрес: {db_user.address}\n\n"
+            f"{items_text}\n"
+            f"💰 Итого: {total_price} ₽"
+        )
+
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("✅ Подтвердить Заказ", callback_data="confirm_order")],
+            [InlineKeyboardButton("❌ Отменить Заказ", callback_data="cancel_order")],
+
+        ])
+
+        await query.message.reply_text(message_text, reply_markup=keyboard)
+
+    except Exception as e:
+        await query.message.reply_text("❌ Ошибка при оформлении заказа.")
+        print(f"Ошибка: {e}")
+
+# ======= Подтверждение оформления заказа из корзины =======
+async def customer_confirm_checkout(update: Update, context: CallbackContext):
+    """
+    Создание заказа и очистка корзины после подтверждения.
     """
     query = update.callback_query
     user = query.from_user
@@ -419,61 +450,112 @@ async def checkout(update: Update, context: CallbackContext):
     try:
         await query.answer()
 
+        # Получаем пользователя
+        db_user = await sync_to_async(CustomUser.objects.get)(telegram_id=user.id)
+
         # Получаем корзину пользователя
-        cart = await sync_to_async(Cart.objects.get)(user__telegram_id=user.id)
+        cart = await sync_to_async(lambda: Cart.objects.get(user=db_user))()
+
+        # Проверяем, есть ли товары в корзине
         cart_items = await sync_to_async(lambda: list(cart.items.all()))()
 
         if not cart_items:
-            await query.message.reply_text("\U0001F6D2 Корзина пуста. Невозможно оформить заказ.")
+            await query.message.reply_text("🛒 Ваша корзина пуста.")
             return
 
-        # Создаем заказ (синхронная функция для sync_to_async)
-        def create_order():
-            # Вычисляем общую стоимость заказа
-            total_price = sum(item.product.price * item.quantity for item in cart_items)
+        # Создаём заказ
+        order = await sync_to_async(Order.objects.create)(
+            user=db_user,
+            total_price=sum(item.price for item in cart_items),
+            address=db_user.address  # Записываем адрес пользователя
+        )
 
-            # Создаём заказ с указанной стоимостью
-            order = Order.objects.create(
-                user=cart.user,
-                status="created",
-                total_price=total_price  # Указываем вычисленное значение
+        # Переносим товары из корзины в заказ
+        for item in cart_items:
+            product = await sync_to_async(lambda: item.product)()  # Обернули product в sync_to_async
+            await sync_to_async(OrderItem.objects.create)(
+                order=order,
+                product=product,
+                quantity=item.quantity,
+                price=item.price
             )
 
-            # Добавляем позиции заказа
-            for item in cart_items:
-                OrderItem.objects.create(
-                    order=order,
-                    product=item.product,
-                    quantity=item.quantity,
-                    price=item.price
-                )
+        # Очищаем корзину пользователя
+        await sync_to_async(lambda: cart.items.all().delete())()
 
-            return order
+        # Убираем кнопки у сообщения
+        await query.edit_message_reply_markup(reply_markup=None)
 
-        # Асинхронно вызываем синхронную функцию
-        order = await sync_to_async(create_order)()
 
-        # Очищаем корзину
-        await sync_to_async(cart.items.all().delete)()
+        # Отправляем уведомления админам и сотрудникам
+        # await notify_admin(order)
+        # await notify_staff(order)
 
-        logger.info(f"Пользователь {user.username} ({user.id}) оформил заказ #{order.id}.")
-        await query.message.reply_text(f"✅ Ваш заказ #{order.id} успешно оформлен!")
+
+        # Сообщаем пользователю об успешном оформлении заказа
+        logger.info(f"✅ Пользователь {user.username} ({user.id}) оформил заказ #{order.id}.")
+        await query.message.reply_text(f"\U0001F4E6 Ваш заказ #{order.id} успешно оформлен!")
 
     except Cart.DoesNotExist:
-        await query.message.reply_text("\U0001F6D2 Корзина пуста. Невозможно оформить заказ.")
+        logger.error(f"❌ Корзина пользователя {user.username} ({user.id}) не найдена.")
+        await query.message.reply_text("⚠️ Ошибка: корзина не найдена.")
     except Exception as e:
-        logger.exception(f"Ошибка при оформлении заказа: {e}")
-        await query.message.reply_text("Произошла ошибка при оформлении заказа.")
+        logger.exception(f"❌ Ошибка при подтверждении оформления заказа: {e}")
+        await query.message.reply_text("⚠️ Произошла ошибка при оформлении заказа.")
+
+
+# ======= Отмена заказа =======
+async def customer_cancel_order(update: Update, context: CallbackContext):
+    """
+    Отмена заказа пользователем.
+    """
+    query = update.callback_query
+    user = query.from_user
+
+    try:
+        await query.answer()
+
+        # Получаем пользователя
+        db_user = await sync_to_async(CustomUser.objects.get)(telegram_id=user.id)
+
+        # Ищем последний заказ пользователя в статусе "created"
+        order = await sync_to_async(lambda: Order.objects.filter(user=db_user, status="created").last())()
+
+        if not order:
+            await query.message.reply_text("⚠️ У вас нет активных заказов, которые можно отменить.")
+            return
+
+        # Обновляем статус заказа на "canceled"
+        order.status = "canceled"
+        await sync_to_async(order.save)()
+
+        # Уведомляем пользователя
+        await query.edit_message_reply_markup(reply_markup=None)
+        await query.message.reply_text(f"❌ Ваш заказ #{order.id} был отменён.")
+
+        # Логируем отмену
+        logger.info(f"❌ Пользователь {user.username} ({user.id}) отменил заказ #{order.id}.")
+
+    except CustomUser.DoesNotExist:
+        logger.error(f"❌ Пользователь {user.username} ({user.id}) не найден в БД.")
+        await query.message.reply_text("⚠️ Ошибка: пользователь не найден.")
+    except Exception as e:
+        logger.exception(f"❌ Ошибка при отмене заказа: {e}")
+        await query.message.reply_text("⚠️ Произошла ошибка при отмене заказа.")
+
+
+
+
 
 # ======= Просмотр заказов =======
-async def view_orders(update: Update, context: CallbackContext):
+async def customer_view_orders(update: Update, context: CallbackContext):
     """
-    Отображение истории заказов пользователя в виде таблицы.
+    Отображение истории заказов пользователя с возможностью повторного заказа.
     """
     user = update.effective_user
 
     try:
-        logger.info(f"Пользователь {user.username} ({user.id}) вызвал команду /view_orders")
+        logger.info(f"Пользователь {user.username} ({user.id}) открыл список заказов.")
 
         # Получаем заказы пользователя
         orders = await sync_to_async(lambda: list(Order.objects.filter(user__telegram_id=user.id)))()
@@ -481,43 +563,114 @@ async def view_orders(update: Update, context: CallbackContext):
             await update.message.reply_text("У вас нет оформленных заказов.")
             return
 
-        # Формируем таблицу с заказами
-        table_text = ""
+        # Формируем сообщения с заказами
         for order in orders:
-            table_text += f"\n<b>Заказ №{order.id}</b>\n"
-            table_text += f"{'Товар':<20} {'Кол-во':<10} {'Цена':<10} {'Статус':<15}\n"
+            order_text = f"\n<b>📦 Заказ №{order.id}</b>\n"
+            order_text += f"🗓 Дата: {order.created_at.strftime('%d.%m.%Y %H:%M')}\n"
+            order_text += f"💰 Сумма: {order.total_price:.2f} ₽\n"
+            order_text += f"📌 Статус: <b>{order.get_status_display()}</b>\n"
+            order_text += f"📜 Товары:\n"
+
+            # Получаем товары в заказе
             items = await sync_to_async(lambda: list(order.items.all()))()
             for item in items:
                 product_name = await sync_to_async(lambda: item.product.name)()
-                table_text += f"{product_name:<20} {item.quantity:<10} {item.price:<10.2f} {order.status:<15}\n"
+                order_text += f"  ➜ {shorten(product_name, width=30, placeholder='...')} — {item.quantity} шт. ({item.price:.2f} ₽)\n"
 
-        # Разбиваем текст на части, если он слишком длинный
-        chunks = [table_text[i:i + 4000] for i in range(0, len(table_text), 4000)]
-        for chunk in chunks:
-            await update.message.reply_text(f"<pre>{chunk}</pre>", parse_mode="HTML")
+            # Добавляем кнопку "Повторить заказ"
+            keyboard = [[InlineKeyboardButton("🔄 Повторить заказ", callback_data=f"repeat_order_{order.id}")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
+            await update.message.reply_text(order_text, parse_mode="HTML", reply_markup=reply_markup)
 
     except Exception as e:
         logger.exception(f"Ошибка при отображении заказов для пользователя {user.username} ({user.id}): {e}")
-        await update.message.reply_text("Произошла ошибка при загрузке истории заказов.")
+        await update.message.reply_text("⚠️ Произошла ошибка при загрузке истории заказов.")
 
 
-async def handle_customer_menu(update: Update, context: CallbackContext):
+async def customer_repeat_order(update: Update, context: CallbackContext):
+    """
+    Повторение заказа: копирование товаров из заказа в корзину пользователя.
+    """
+    query = update.callback_query
+    user = query.from_user
 
-    text = update.message.text
+    try:
+        await query.answer()
+        order_id = int(query.data.split('_')[-1])
 
-    if text == "📦 Мои заказы":
-        await view_orders(update, context)
-    elif text == "🛒 Корзина":
-        await view_cart(update, context)
-    elif text == "🛍️ Каталог":
-        await view_catalog(update, context)
-    elif text == "ℹ️ Показать помощь":
-        await show_help(update, context)
-    else:
-        await update.message.reply_text(
-            "⚠️ Команда не распознана. Пожалуйста, выберите 333 пункт меню.",
-            reply_markup=customer_keyboard
-        )
+        # Получаем пользователя
+        db_user = await sync_to_async(CustomUser.objects.get)(telegram_id=user.id)
+
+        # Получаем заказ
+        order = await sync_to_async(Order.objects.get)(id=order_id, user=db_user)
+
+        # Получаем или создаем корзину пользователя
+        cart, _ = await sync_to_async(Cart.objects.get_or_create)(user=db_user)
+
+        # Переносим товары из заказа в корзину
+        order_items = await sync_to_async(lambda: list(order.items.all()))()
+        for item in order_items:
+            product = await sync_to_async(lambda: item.product)()
+
+            # Проверяем, есть ли товар уже в корзине
+            cart_item, created = await sync_to_async(CartItem.objects.get_or_create)(
+                cart=cart, product=product,
+                defaults={"quantity": item.quantity, "price": item.price}
+            )
+
+            if not created:
+                cart_item.quantity += item.quantity
+                cart_item.price = cart_item.quantity * product.price
+                await sync_to_async(cart_item.save)()
+
+        await query.message.reply_text(f"✅ Все товары из заказа #{order_id} добавлены в корзину!")
+
+    except Order.DoesNotExist:
+        await query.message.reply_text("⚠️ Ошибка: заказ не найден.")
+    except CustomUser.DoesNotExist:
+        await query.message.reply_text("⚠️ Ошибка: пользователь не найден.")
+    except Exception as e:
+        logger.exception(f"❌ Ошибка при повторении заказа #{order_id}: {e}")
+        await query.message.reply_text("⚠️ Произошла ошибка при повторении заказа.")
+
+
+
+#
+# # ======= Просмотр заказов =======
+# async def customer_view_orders(update: Update, context: CallbackContext):
+#     """
+#     Отображение истории заказов пользователя в виде таблицы.
+#     """
+#     user = update.effective_user
+#
+#     try:
+#         logger.info(f"Пользователь {user.username} ({user.id}) вызвал команду /view_orders")
+#
+#         # Получаем заказы пользователя
+#         orders = await sync_to_async(lambda: list(Order.objects.filter(user__telegram_id=user.id)))()
+#         if not orders:
+#             await update.message.reply_text("У вас нет оформленных заказов.")
+#             return
+#
+#         # Формируем таблицу с заказами
+#         table_text = ""
+#         for order in orders:
+#             table_text += f"\n<b>Заказ №{order.id}</b>\n"
+#             table_text += f"{'Товар':<20} {'Кол-во':<10} {'Цена':<10} {'Статус':<15}\n"
+#             items = await sync_to_async(lambda: list(order.items.all()))()
+#             for item in items:
+#                 product_name = await sync_to_async(lambda: item.product.name)()
+#                 table_text += f"{product_name:<20} {item.quantity:<10} {item.price:<10.2f} {order.status:<15}\n"
+#
+#         # Разбиваем текст на части, если он слишком длинный
+#         chunks = [table_text[i:i + 4000] for i in range(0, len(table_text), 4000)]
+#         for chunk in chunks:
+#             await update.message.reply_text(f"<pre>{chunk}</pre>", parse_mode="HTML")
+#
+#     except Exception as e:
+#         logger.exception(f"Ошибка при отображении заказов для пользователя {user.username} ({user.id}): {e}")
+#         await update.message.reply_text("Произошла ошибка при загрузке истории заказов.")
 
 
 
@@ -665,10 +818,3 @@ async def handle_customer_menu(update: Update, context: CallbackContext):
 #     except Exception as e:
 #         logger.error(f"❌ Ошибка в handle_staff_order_details: {e}")
 #         await query.edit_message_text("❌ Произошла ошибка. Попробуйте позже.")
-#
-#
-#
-#
-#
-
-

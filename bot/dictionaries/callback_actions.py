@@ -29,6 +29,16 @@ from bot.handlers.staff import (
     handle_staff_help,
     )
 
+from bot.handlers.customer import (
+    customer_add_to_cart,
+    customer_decrease_quantity,
+    customer_increase_quantity,
+    customer_remove_from_cart,
+    customer_view_checkout,
+    customer_confirm_checkout,
+    customer_cancel_order,
+    customer_repeat_order,
+    )
 
 from bot.handlers.common_helpers import feature_in_development
 
@@ -65,6 +75,17 @@ CALLBACK_ACTIONS = {
     "staff_complete_order": complete_order_callback,  # ✅ Завершение заказа
     "staff_cancel_order": cancel_order_callback,  # ❌ Отмена заказа
     "staff_help": handle_staff_help,
+
+    # 🔹 Управление заказами для Клиента
+    "add_to_cart": customer_add_to_cart,
+    "decrease": customer_decrease_quantity,
+    "increase": customer_increase_quantity,
+    "remove_from_cart": customer_remove_from_cart,
+    "checkout": customer_view_checkout,
+    "confirm_order": customer_confirm_checkout,
+    "cancel_order": customer_cancel_order,
+    "repeat_order": customer_repeat_order,
+
 
 
 }
