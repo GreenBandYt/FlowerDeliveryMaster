@@ -3,7 +3,7 @@ import json
 
 # 🔹 Рабочее время (часы и минуты)
 WORK_HOURS_START = datetime.time(9, 0)  # 09:00
-WORK_HOURS_END = datetime.time(20, 0)  # 20:00
+WORK_HOURS_END = datetime.time(22, 0)  # 20:00
 
 # 🔹 Интервал проверки новых заказов (минуты)
 NEW_ORDER_NOTIFY_INTERVAL = 1

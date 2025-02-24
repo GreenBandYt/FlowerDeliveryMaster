@@ -75,10 +75,11 @@ async def process_new_orders():
 
     for order in orders:
         if should_notify_order(order):
-            message = await format_order_message(order)  # добавляем await
-            await send_notifications(admins_and_staff, message)
+            message = await format_order_message(order)
+            await send_notifications(admins_and_staff, message, order.id)
 
             logger.info(f"📨 Уведомление отправлено для заказа #{order.id}")
+
 
 
 
@@ -119,13 +120,26 @@ async def get_admins_and_staff():
     return [user.telegram_id for user in users if user.is_superuser or user.is_staff]
 
 
-async def send_notifications(user_ids, message):
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+
+async def send_notifications(user_ids, message, order_id):
     """
     Отправляет уведомление всем пользователям из списка.
     """
     for user_id in user_ids:
         try:
-            await bot.send_message(chat_id=user_id, text=message, parse_mode="Markdown")
+            user = await sync_to_async(lambda: CustomUser.objects.get(telegram_id=user_id))()
+
+            # Если пользователь не администратор и не суперпользователь — добавляем кнопку
+            if user.is_staff:
+                keyboard = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("✅ Взять в работу", callback_data=f"staff_take_order:{order_id}")]
+                ])
+                await bot.send_message(chat_id=user_id, text=message, parse_mode="Markdown", reply_markup=keyboard)
+            else:
+                # Администратору отправляем без кнопки
+                await bot.send_message(chat_id=user_id, text=message, parse_mode="Markdown")
+
             await asyncio.sleep(1)  # Чтобы не попасть под ограничение Telegram
         except Exception as e:
             logger.error(f"❌ Ошибка отправки уведомления пользователю {user_id}: {e}")
