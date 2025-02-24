@@ -1,15 +1,13 @@
-import asyncio
-import datetime
-import logging
+# time_settings.json
 
+import asyncio
+import logging
 from telegram import Bot
 from django.utils.timezone import now
 from asgiref.sync import sync_to_async
 
-from bot.utils.time_config import (
-    REPEAT_ORDER_NOTIFY_INTERVAL,
-    NEW_ORDER_NOTIFY_INTERVAL,
-)
+from bot.utils.time_config import load_settings  # Добавляем импорт функции load_settings
+from bot.utils.time_config import NEW_ORDER_NOTIFY_INTERVAL, REPEAT_ORDER_NOTIFY_INTERVAL
 from bot.utils.time_utils import is_working_hours
 from catalog.models import Order
 from users.models import CustomUser
@@ -20,7 +18,7 @@ from dotenv import load_dotenv  # Добавляем загрузку .env
 # Загружаем переменные окружения
 load_dotenv()
 
-# Теперь получаем токен из окружения
+# Получаем токен из окружения
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 # Настраиваем логирование
@@ -43,6 +41,13 @@ async def notification_worker():
 
     while True:
         try:
+            # Загрузим настройки перед каждой проверкой
+            settings = load_settings()  # Получаем актуальные настройки
+
+            # Теперь используем переменные из настроек
+            NEW_ORDER_NOTIFY_INTERVAL = settings['new_order_notify_interval']
+            REPEAT_ORDER_NOTIFY_INTERVAL = settings['repeat_order_notify_interval']
+
             if not is_working_hours():
                 logger.info("⏳ Вне рабочего времени, уведомления не отправляются.")
             else:
@@ -54,6 +59,7 @@ async def notification_worker():
 
         except Exception as e:
             logger.error(f"❌ Ошибка в цикле уведомлений: {e}", exc_info=True)
+
 
 
 async def process_new_orders():

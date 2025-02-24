@@ -1,0 +1,7 @@
+{
+    "work_hours_start": "08:00",
+    "work_hours_end": "20:00",
+    "new_order_notify_interval": 2,
+    "repeat_order_notify_interval": 3,
+    "allow_non_working_hours_notifications": false
+}

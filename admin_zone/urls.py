@@ -1,3 +1,5 @@
+# admin_zone/urls.py
+
 from django.urls import path
 from . import views
 
@@ -10,4 +12,6 @@ urlpatterns = [
     path('reviews/', views.manage_reviews, name='reviews'),  # Управление отзывами
     path('reviews/<int:review_id>/delete/', views.delete_review, name='delete_review'),  # Удаление отзыва
     path('analytics/', views.view_analytics, name='analytics'),  # Просмотр аналитики
+    path('edit-time-settings/', views.edit_time_settings, name='edit_time_settings'),  # Страница настроек времени
 ]
+

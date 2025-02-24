@@ -1,3 +1,5 @@
+# admin_zone/views.py
+
 from django.shortcuts import render, get_object_or_404, redirect
 from users.models import CustomUser
 from catalog.models import Order, OrderItem, Review
@@ -103,4 +105,44 @@ def view_analytics(request):
         'orders_year': data_year['orders'],
         'revenue_year': data_year['revenue'],
         'average_year': data_year['average_check'],
+    })
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from .forms import TimeSettingsForm
+from bot.utils.time_config import load_settings, save_settings  # Импортируем функции загрузки и сохранения настроек
+
+def edit_time_settings(request):
+    # Загружаем текущие настройки
+    settings = load_settings()
+
+    # Получаем время последнего уведомления (если оно есть)
+    last_notified_time = settings.get('last_notified_at', None)
+    if last_notified_time:
+        last_notified_time = last_notified_time.strftime('%Y-%m-%d %H:%M:%S')  # Форматируем в строку
+
+    if request.method == 'POST':
+        form = TimeSettingsForm(request.POST)
+        if form.is_valid():
+            # Получаем данные из формы
+            new_settings = form.cleaned_data
+
+            # Преобразуем данные формы в datetime.time объекты
+            new_settings['work_hours_start'] = new_settings['work_hours_start']
+            new_settings['work_hours_end'] = new_settings['work_hours_end']
+
+            # Сохраняем новые настройки
+            save_settings(new_settings)
+
+            # Обновляем текущие настройки
+            settings.update(new_settings)
+
+            messages.success(request, "Настройки времени успешно обновлены.")
+            return redirect('admin_zone:edit_time_settings')  # Перенаправляем на текущую страницу после сохранения
+    else:
+        form = TimeSettingsForm(initial=settings)
+
+    return render(request, 'admin_zone/edit_time_settings.html', {
+        'form': form,
+        'last_notified_time': last_notified_time  # Передаем время последнего уведомления
     })
