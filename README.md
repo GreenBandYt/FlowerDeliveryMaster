@@ -160,4 +160,22 @@ FlowerDeliveryMaster/
 
 ## 🔖 **10. Лицензия**
 Этот проект распространяется под лицензией **MIT**.
-```
+
+---
+
+## ✨ **Автор**
+  <a href="https://github.com/GreenBandYt" target="_blank" rel="noopener noreferrer">
+    <img src="https://img.shields.io/badge/GreenBandYt-Зелёный_код_жизни-32CD32?style=for-the-badge&logo=leaflet&logoColor=white">
+  </a>
+  
+- Разработано в рамках учебного проекта.
+
+---
+
+### 📬 Контакты
+
+- **Email:** [bandurayv@yandex.ru](mailto:bandurayv@yandex.ru)
+- **Telegram:** [@BandYuraV](https://t.me/BandYuraV)
+- **GinHub:** [GreenBandYt](https://github.com/GreenBandYt)
+
+---
