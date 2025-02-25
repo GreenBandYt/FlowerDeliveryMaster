@@ -114,56 +114,19 @@ pytest tests/
 
 ---
 
-## 📂 **8. Структура проекта**  
-
-```
-FlowerDeliveryMaster/
-│
-├── catalog/                 # Основное приложение (товары, заказы, отзывы)
-│   ├── models.py            # Модели данных (Product, Cart, Order, Review)
-│   ├── views.py             # Представления
-│   ├── urls.py              # URL-маршруты
-│   ├── forms.py             # Формы для отзывов и заказов
-│   └── templates/           # Шаблоны для отображения
-│
-├── users/                   # Кастомная модель пользователя
-│
-├── bot/                     # Telegram-бот
-│   ├── handlers/            # Обработчики сообщений
-│   ├── utils/               # Утилиты (парсинг callback'ов, доступы)
-│   ├── keyboards/           # Клавиатуры бота
-│   ├── bot.py               # Основной файл бота
-│
-├── tests/                   # Тесты
-│   ├── test_models.py       # Тесты моделей
-│   ├── test_views.py        # Тесты представлений
-│   ├── test_forms.py        # Тесты форм
-│   └── test_urls.py         # Тесты маршрутов
-│
-├── flowerdelivery/          # Настройки Django
-│   ├── settings.py          # Конфигурация проекта
-│   └── urls.py              # Основные маршруты
-│
-├── static/                  # Статические файлы (CSS, JS)
-├── media/                   # Медиафайлы пользователей
-└── requirements.txt         # Список зависимостей
-```
-
----
-
-## 💡 **9. Доработки и идеи**
+## 💡 **8. Доработки и идеи**
 - 🔥 **Интеграция уведомлений** в Telegram-бота о статусе заказов.  
 - 📊 **Аналитика и отчёты** для администраторов.  
 - 🎨 **Улучшение UI** с Bootstrap и JavaScript.  
 
 ---
 
-## 🔖 **10. Лицензия**
+## 🔖 **9. Лицензия**
 Этот проект распространяется под лицензией **MIT**.
 
 ---
 
-## ✨ **Автор**
+## ✨ **10. Автор** Юрий Бандура
   <a href="https://github.com/GreenBandYt" target="_blank" rel="noopener noreferrer">
     <img src="https://img.shields.io/badge/GreenBandYt-Зелёный_код_жизни-32CD32?style=for-the-badge&logo=leaflet&logoColor=white">
   </a>
