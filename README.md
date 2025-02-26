@@ -86,6 +86,14 @@ TELEGRAM_BOT_TOKEN=токен_бота
 EMAIL_HOST_USER=ваш_email@yandex.ru
 EMAIL_HOST_PASSWORD=пароль_от_email
 ```
+```
+Переименовать Set_D.py на settings.py 
+Заменены секретные данные на собственные:
+
+SECRET_KEY → os.getenv("DJANGO_SECRET_KEY", "your-default-secret-key")
+EMAIL_HOST_USER и EMAIL_HOST_PASSWORD → теперь берутся из .env
+ALLOWED_HOSTS → теперь можно задавать через .env
+```
 
 ### **3. Запуск веб-приложения (Django)**  
 ```bash
